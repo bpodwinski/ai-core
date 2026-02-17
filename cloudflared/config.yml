@@ -1,0 +1,10 @@
+tunnel: n8n_benoitpodwinski_com
+
+ingress:
+- hostname: n8n.benoitpodwinski.com
+  service: http://n8n:5678
+
+- hostname: qdrant.benoitpodwinski.com
+  service: http://qdrant:6333
+
+- service: http_status:404

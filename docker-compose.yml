@@ -1,28 +1,40 @@
 name: n8n_benoitpodwinski_com
 services:
+  cf-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: n8n-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    environment:
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN}"
+    depends_on:
+      - n8n
+      - qdrant
+
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: n8n
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:19064:5678"
     environment:
       NODE_ENV: production
       N8N_HOST: "${SUBDOMAIN}.${DOMAIN_NAME}"
       N8N_PORT: "5678"
       N8N_PROTOCOL: "https"
+      N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY}"
       WEBHOOK_URL: "https://${SUBDOMAIN}.${DOMAIN_NAME}/"
+      N8N_PROXY_HOPS: 1
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN}"
       GENERIC_TIMEZONE: "${GENERIC_TIMEZONE}"
       TZ: "${GENERIC_TIMEZONE}"
 
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
-      DB_POSTGRESDB_PORT: "5432"
-      DB_POSTGRESDB_DATABASE: n8n_memory
-      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PORT: "${POSTGRES_PORT}"
+      DB_POSTGRESDB_DATABASE: "${POSTGRES_DB}"
+      DB_POSTGRESDB_USER: "${POSTGRES_USER}"
       DB_POSTGRESDB_PASSWORD: "${POSTGRES_PASSWORD}"
-
-      N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY}"
 
     volumes:
       - n8n_data:/home/node/.n8n
@@ -30,36 +42,58 @@ services:
     depends_on:
       - postgres
       - python_script
+      - qdrant
 
   python_script:
-    image: python:3.14-slim
+    build:
+      context: .
+      dockerfile: Dockerfile.python_script
+    image: n8n-python-script:local
     container_name: n8n-python-script
     restart: unless-stopped
     expose:
-      - "8099"
+      - "80"
     volumes:
       - ./scripts:/scripts:ro
     environment:
-      IMAP_HOST: "${IMAP_HOST}"
+      IMAP_HOST: "${IMAP_HOST:-mail.infomaniak.com}"
+      IMAP_PORT: "${IMAP_PORT:-993}"
       IMAP_USER: "${IMAP_USER}"
       IMAP_PASS: "${IMAP_PASS}"
       IMAP_MAILBOX: "${IMAP_MAILBOX:-INBOX}"
       IMAP_TRASH: "${IMAP_TRASH:-Trash}"
+      IMAP_LIMIT: "${IMAP_LIMIT:-200}"
+      IMAP_BODY_MAX: "${IMAP_BODY_MAX:-4000}"
     command: >
-      sh -lc "pip install --no-cache-dir fastapi uvicorn &&
-        uvicorn api:app --host 0.0.0.0 --port 8099 --app-dir /scripts"
+      sh -lc "cd /scripts &&
+        uvicorn api:app --host 0.0.0.0 --port 80"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: n8n-qdrant
+    restart: always
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    environment:
+      QDRANT__LOG_LEVEL: INFO
+    volumes:
+      - qdrant_data:/qdrant/storage
 
   postgres:
     image: postgres:16
     container_name: n8n-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: n8n
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
-      POSTGRES_DB: n8n_memory
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
 volumes:
   n8n_data:
   postgres_data:
+  qdrant_data:
