@@ -28,17 +28,15 @@ services:
       TUNNEL_TOKEN: "${TUNNEL_TOKEN}"
       GENERIC_TIMEZONE: "${GENERIC_TIMEZONE}"
       TZ: "${GENERIC_TIMEZONE}"
-
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: "${POSTGRES_PORT}"
       DB_POSTGRESDB_DATABASE: "${POSTGRES_DB}"
       DB_POSTGRESDB_USER: "${POSTGRES_USER}"
       DB_POSTGRESDB_PASSWORD: "${POSTGRES_PASSWORD}"
-
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./local-files:/home/node/.n8n-files
+      - ./local-files:/files
     depends_on:
       - postgres
       - python_script
