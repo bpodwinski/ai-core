@@ -1,0 +1,64 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19064:5678"
+    environment:
+      NODE_ENV: production
+      N8N_HOST: "${SUBDOMAIN}.${DOMAIN_NAME}"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "https"
+      WEBHOOK_URL: "https://${SUBDOMAIN}.${DOMAIN_NAME}/"
+      GENERIC_TIMEZONE: "${GENERIC_TIMEZONE}"
+      TZ: "${GENERIC_TIMEZONE}"
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_DATABASE: n8n_memory
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: "${POSTGRES_PASSWORD}"
+
+      N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY}"
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+    depends_on:
+      - postgres
+      - python_script
+
+  python_script:
+    image: python:3.14-slim
+    container_name: n8n-python-script
+    restart: unless-stopped
+    expose:
+      - "8099"
+    volumes:
+      - ./scripts:/scripts:ro
+    environment:
+      IMAP_HOST: "${IMAP_HOST}"
+      IMAP_USER: "${IMAP_USER}"
+      IMAP_PASS: "${IMAP_PASS}"
+      IMAP_MAILBOX: "${IMAP_MAILBOX:-INBOX}"
+      IMAP_TRASH: "${IMAP_TRASH:-Trash}"
+    command: >
+      sh -lc "pip install --no-cache-dir fastapi uvicorn &&
+        uvicorn api:app --host 0.0.0.0 --port 8099 --app-dir /scripts"
+
+  postgres:
+    image: postgres:16
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: n8n_memory
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  n8n_data:
+  postgres_data:

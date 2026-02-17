@@ -1,0 +1,9 @@
+*.log
+
+n8n_data/
+qdrant_data/
+
+**/*.sqlite
+**/*.sqlite-wal
+**/*.sqlite-shm
+*.env
