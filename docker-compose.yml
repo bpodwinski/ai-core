@@ -38,7 +38,7 @@ services:
 
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./local-files:/files
+      - ./local-files:/home/node/.n8n-files
     depends_on:
       - postgres
       - python_script
