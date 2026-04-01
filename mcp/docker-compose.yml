@@ -35,9 +35,18 @@ services:
       OAUTH_ISSUER: "${OAUTH_ISSUER}"
       MCP_API_KEY: "${MCP_API_KEY}"
 
+  # Custom Rust MCP (pas de MCP communautaire pour Leptos)
   mcp-leptos:
-    build: ./servers/leptos/
+    build: ./servers/rust-docs/
     container_name: mcp-leptos
     restart: unless-stopped
     expose:
       - "80"
+
+  # Exemple MCP communautaire via supergateway
+  # mcp-context7:
+  #   build: ./servers/context7/
+  #   container_name: mcp-context7
+  #   restart: unless-stopped
+  #   expose:
+  #     - "80"

@@ -19,10 +19,10 @@ server {
         proxy_set_header        Authorization $http_authorization;
     }
 
-    # MCP servers — SSE + auth (prefix conservé, supergateway gère /leptos/sse et /leptos/message)
+    # MCP custom Rust (prefix strippé — le serveur gère /)
     location /leptos/ {
         auth_request            /auth-check;
-        proxy_pass              http://mcp-leptos:80;
+        proxy_pass              http://mcp-leptos:80/;
         proxy_buffering         off;
         proxy_cache             off;
         proxy_set_header        Connection '';
@@ -32,12 +32,14 @@ server {
         proxy_read_timeout      86400s;
     }
 
-    # location /axum/ {
+    # MCP communautaire via supergateway (prefix conservé — supergateway gère /<name>/sse)
+    # location /context7/ {
     #     auth_request            /auth-check;
-    #     proxy_pass              http://mcp-axum:80/;
+    #     proxy_pass              http://mcp-context7:80;
     #     proxy_buffering         off;
     #     proxy_cache             off;
     #     proxy_set_header        Connection '';
+    #     proxy_set_header        Host $host;
     #     proxy_http_version      1.1;
     #     chunked_transfer_encoding off;
     #     proxy_read_timeout      86400s;
