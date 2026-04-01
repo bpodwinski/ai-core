@@ -7,3 +7,4 @@ qdrant_data/
 **/*.sqlite-wal
 **/*.sqlite-shm
 *.env
+*.env.*
