@@ -1,0 +1,7 @@
+tunnel: mcp_benoitpodwinski_com
+
+ingress:
+- hostname: mcp.benoitpodwinski.com
+  service: http://nginx:80
+
+- service: http_status:404

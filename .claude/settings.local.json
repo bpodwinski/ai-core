@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C /e/Dev/ai-core log --oneline)"
+      "Bash(git -C /e/Dev/ai-core log --oneline)",
+      "WebSearch"
     ]
   }
 }
