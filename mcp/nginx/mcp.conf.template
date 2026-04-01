@@ -1,0 +1,50 @@
+server {
+    listen 80;
+
+    # OAuth discovery + endpoints (pas d'auth)
+    location /.well-known/ {
+        proxy_pass http://oauth:8080;
+    }
+
+    location /oauth/ {
+        proxy_pass http://oauth:8080;
+    }
+
+    # Validation interne du Bearer token (nginx auth_request)
+    location = /auth-check {
+        internal;
+        proxy_pass              http://oauth:8080/oauth/validate;
+        proxy_pass_request_body off;
+        proxy_set_header        Content-Length "";
+        proxy_set_header        Authorization $http_authorization;
+    }
+
+    # MCP servers — SSE + auth (prefix conservé, supergateway gère /leptos/sse et /leptos/message)
+    location /leptos/ {
+        auth_request            /auth-check;
+        proxy_pass              http://mcp-leptos:80;
+        proxy_buffering         off;
+        proxy_cache             off;
+        proxy_set_header        Connection '';
+        proxy_set_header        Host $host;
+        proxy_http_version      1.1;
+        chunked_transfer_encoding off;
+        proxy_read_timeout      86400s;
+    }
+
+    # location /axum/ {
+    #     auth_request            /auth-check;
+    #     proxy_pass              http://mcp-axum:80/;
+    #     proxy_buffering         off;
+    #     proxy_cache             off;
+    #     proxy_set_header        Connection '';
+    #     proxy_http_version      1.1;
+    #     chunked_transfer_encoding off;
+    #     proxy_read_timeout      86400s;
+    # }
+
+    location /health {
+        return 200 '{"status":"ok"}';
+        add_header Content-Type application/json;
+    }
+}
