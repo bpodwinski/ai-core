@@ -1,7 +1,7 @@
 use rmcp::handler::server::wrapper::{Json, Parameters};
+use rmcp::model::{ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
 use rmcp::{ServerHandler, tool, tool_router};
-use rmcp::model::ServerInfo;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -107,7 +107,7 @@ impl DocServer {
     }
 }
 
-#[tool_router]
+#[tool_router(vis = "pub")]
 impl DocServer {
     #[tool(name = "search_docs", description = "Search documentation across all loaded docs. Returns matching sections.")]
     fn search_docs(&self, Parameters(input): Parameters<SearchInput>) -> Json<DocResult> {
@@ -190,6 +190,7 @@ impl DocServer {
 impl ServerHandler for DocServer {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::default();
+        info.capabilities = ServerCapabilities::builder().enable_tools().build();
         info.instructions = Some(
             "Documentation MCP server. Serves docs loaded from the DOCS_PATH directory. \
              Use search_docs to find information, get_doc to retrieve a specific page, \

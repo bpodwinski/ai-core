@@ -1,3 +1,4 @@
+use rmcp::handler::server::router::Router;
 use rmcp::transport::streamable_http_server::{
     StreamableHttpServerConfig, StreamableHttpService,
     session::local::LocalSessionManager,
@@ -21,12 +22,17 @@ async fn main() -> anyhow::Result<()> {
     let ct = CancellationToken::new();
 
     let service = StreamableHttpService::new(
-        || Ok(DocServer::new()),
+        || {
+            let server = DocServer::new();
+            let router = Router::new(server)
+                .with_tools(DocServer::tool_router());
+            Ok(router)
+        },
         LocalSessionManager::default().into(),
         StreamableHttpServerConfig::default().with_cancellation_token(ct.child_token()),
     );
 
-    let router = axum::Router::new().nest_service("/", service);
+    let router = axum::Router::new().fallback_service(service);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await?;
     tracing::info!("MCP rust-docs server listening on port 80");

@@ -28,7 +28,7 @@ logs *ARGS:
 
 # Déployer sur le serveur
 deploy:
-    bash deploy.sh
+    powershell -NoProfile -ExecutionPolicy Bypass -File deploy.ps1
 
 # Build + deploy en une commande
 ship: docker-build deploy
