@@ -2,7 +2,8 @@ FROM node:24-slim
 
 WORKDIR /app
 
-RUN npm init -y && npm install express
+COPY package.json .
+RUN npm install --omit=dev
 
 COPY server.js .
 
