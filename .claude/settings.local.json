@@ -21,7 +21,14 @@
       "Bash(cp /c/Users/Admin/.ssh/mcp_deploy /tmp/mcp_deploy)",
       "Bash(chmod 600 /tmp/mcp_deploy)",
       "Bash(ssh -i /tmp/mcp_deploy -p 22 dockerproxy@marduk.benoitpodwinski.com \"echo ok\")",
-      "Bash(cargo check:*)"
+      "Bash(cargo check:*)",
+      "Bash(git -C /e/Dev/ai-core/mcp status --short)",
+      "Bash(git -C /e/Dev/ai-core show HEAD:mcp/.gitignore)",
+      "Bash(wc -l /e/Dev/ai-core/mcp/servers/rust-docs/docs/leptos/*.md /e/Dev/ai-core/mcp/servers/rust-docs/docs/rust/*.md)",
+      "Bash(git -C /e/Dev/ai-core ls-files --others --exclude-standard mcp/)",
+      "Bash(git -C /e/Dev/ai-core check-ignore mcp/.env.deploy mcp/.env mcp/target)",
+      "Bash(git -C /e/Dev/ai-core log --oneline mcp/)",
+      "Bash(xargs wc:*)"
     ]
   }
 }
