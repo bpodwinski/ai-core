@@ -2,44 +2,37 @@ set windows-shell := ["powershell", "-NoProfile", "-Command"]
 
 rust-docs := "servers/rust-docs"
 
-# Build le binaire Rust en local
+# Build the Rust binary locally
 build:
     Set-Location {{rust-docs}}; cargo build --release
 
-# Check compilation sans produire de binaire
+# Check compilation without producing a binary
 check:
     Set-Location {{rust-docs}}; cargo check
 
-# Build l'image Docker (mcp-leptos + mcp-leptos-use)
+# Build Docker image (shared by mcp-leptos + mcp-leptos-use)
 docker-build:
     docker compose build mcp-leptos
 
-# Lance le stack complet en local
+# Start the full stack locally
 up:
     docker compose up -d --build
 
-# Stop le stack
+# Stop the stack
 down:
     docker compose down
 
-# Logs de tous les services
+# Show logs (ex: just logs mcp-leptos)
 logs *ARGS:
     docker compose logs -f {{ARGS}}
 
-# Déployer sur le serveur
+# Deploy to remote server
 deploy:
     powershell -NoProfile -ExecutionPolicy Bypass -File deploy.ps1
 
-# Build + deploy en une commande
+# Build + deploy
 ship: docker-build deploy
 
-# Restart un service (ex: just restart mcp-leptos)
+# Restart a service (ex: just restart mcp-leptos)
 restart SERVICE:
     docker compose restart {{SERVICE}}
-
-# Ajouter un repo de docs au Dockerfile (usage: just add-docs https://github.com/user/repo docs/book/src nom)
-add-docs REPO SRC_PATH NAME:
-    @echo "Ajouter dans servers/rust-docs/Dockerfile :"
-    @echo ""
-    @echo "RUN git clone --depth 1 {{REPO}} /tmp/{{NAME}}"
-    @echo "COPY --from=builder /tmp/{{NAME}}/{{SRC_PATH}}/ /docs/{{NAME}}/"
