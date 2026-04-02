@@ -11,7 +11,17 @@
       "Bash(rustc --version)",
       "Bash(docker --version)",
       "Bash(just --version)",
-      "Read(//c/Users/Admin/.cargo/registry/src/**)"
+      "Read(//c/Users/Admin/.cargo/registry/src/**)",
+      "Read(//c/Users/Admin/.ssh/**)",
+      "Bash(ssh -i \"C:/Users/Admin/.ssh/mcp_deploy\" -p 22 dockerproxy@marduk.benoitpodwinski.com \"echo ok\")",
+      "Bash(chmod 600 /c/Users/Admin/.ssh/mcp_deploy)",
+      "Bash(icacls \"C:\\\\\\\\Users\\\\\\\\Admin\\\\\\\\.ssh\\\\\\\\mcp_deploy\" /inheritance:r /grant \"Admin:R\" /remove \"BUILTIN\\\\\\\\Users\" /remove \"NT AUTHORITY\\\\\\\\Authenticated Users\")",
+      "Bash(powershell.exe -NoProfile -Command \"icacls 'C:\\\\Users\\\\Admin\\\\.ssh\\\\mcp_deploy' /inheritance:r; icacls 'C:\\\\Users\\\\Admin\\\\.ssh\\\\mcp_deploy' /grant 'Admin:R'; icacls 'C:\\\\Users\\\\Admin\\\\.ssh\\\\mcp_deploy' /remove 'BUILTIN\\\\Users'; icacls 'C:\\\\Users\\\\Admin\\\\.ssh\\\\mcp_deploy' /remove 'NT AUTHORITY\\\\Authenticated Users'\")",
+      "Bash(/c/Windows/System32/OpenSSH/ssh.exe -i \"C:/Users/Admin/.ssh/mcp_deploy\" -p 22 dockerproxy@marduk.benoitpodwinski.com \"echo ok\")",
+      "Bash(cp /c/Users/Admin/.ssh/mcp_deploy /tmp/mcp_deploy)",
+      "Bash(chmod 600 /tmp/mcp_deploy)",
+      "Bash(ssh -i /tmp/mcp_deploy -p 22 dockerproxy@marduk.benoitpodwinski.com \"echo ok\")",
+      "Bash(cargo check:*)"
     ]
   }
 }
