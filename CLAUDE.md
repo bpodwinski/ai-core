@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Docker-based n8n workflow automation system with custom Python IMAP microservices, Qdrant vector database, and Cloudflare Tunnel for public HTTPS access.
+Docker-based n8n workflow automation system with custom Python IMAP microservices, Qdrant vector database, and Cloudflare Tunnel for public HTTPS access. Includes a self-hosted MCP server infrastructure at `mcp/`.
 
 ## Common Commands
 
@@ -58,3 +58,104 @@ Copy `.env_example` to `.env` and fill in all values before starting services. K
 Scripts in `scripts/` run inside the `python_script` container. They use only standard library (`imaplib`, `email`, `argparse`, `json`) plus FastAPI/Uvicorn. Dependencies are installed in the Dockerfile — there is no `requirements.txt`.
 
 The API layer (`api.py`) invokes scripts via `subprocess.run`, passing parameters as CLI arguments and returning stdout as JSON responses.
+
+---
+
+## MCP Server Infrastructure
+
+Self-hosted MCP servers at `mcp/`, accessible via `https://mcp.benoitpodwinski.com/<name>/mcp`. All servers share a single Rust binary (`mcp-rust-docs`) serving different docs via `DOCS_PATH`.
+
+### Architecture
+
+```
+Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → mcp-<name>:80
+```
+
+- OAuth 2.1 PKCE via `mcp/oauth/server.js`
+- Transport: Streamable HTTP (`rmcp` Rust SDK)
+- Client config: `"type": "http"` in `.mcp.json`
+
+### Current MCP servers
+
+| Path | Service | Pages | Source |
+|------|---------|-------|--------|
+| `/leptos/` | mcp-leptos | 60 | `github.com/leptos-rs/book` |
+| `/leptos-use/` | mcp-leptos-use | 98 | `github.com/synphonyte/leptos-use` |
+| `/rust/` | mcp-rust | 112 | `github.com/rust-lang/book` |
+| `/induflow/` | mcp-induflow | 8 | Local docs in `mcp/servers/rust-docs/induflow/` |
+
+### MCP Commands
+
+```bash
+cd mcp
+just check        # Cargo check
+just build        # Cargo build --release
+just docker-build # Build Docker image
+just deploy       # Deploy to server (rsync + docker compose)
+just ship         # Build + deploy
+just up           # Start locally
+just down         # Stop
+just logs         # View logs
+```
+
+### Adding a new MCP server
+
+When the user asks to create a new MCP server, follow these steps:
+
+**1. Determine the doc source:**
+- **GitHub repo with markdown docs** → add `git clone` in Dockerfile
+- **Local docs** → place `.md` files in `mcp/servers/rust-docs/<name>/` and `COPY` in Dockerfile
+
+**2. Update `mcp/servers/rust-docs/Dockerfile`:**
+```dockerfile
+# For GitHub source:
+RUN git clone --depth 1 https://github.com/<org>/<repo> /tmp/<name>
+# In the runtime stage:
+COPY --from=builder /tmp/<name>/<docs-path>/ /docs/<name>/
+
+# For local docs:
+COPY <name>/ /docs/<name>/
+```
+
+**3. Update `mcp/docker-compose.yml`:**
+```yaml
+mcp-<name>:
+  image: mcp-rust-docs:local
+  container_name: mcp-<name>
+  restart: unless-stopped
+  expose:
+    - "80"
+  environment:
+    DOCS_PATH: /docs/<name>
+```
+Add `mcp-<name>` to nginx's `depends_on`.
+
+**4. Update `mcp/nginx/mcp.conf.template`:**
+```nginx
+location /<name>/ {
+    auth_request            /auth-check;
+    proxy_pass              http://mcp-<name>:80/;
+    proxy_buffering         off;
+    proxy_cache             off;
+    proxy_set_header        Connection '';
+    proxy_set_header        Host $host;
+    proxy_http_version      1.1;
+    chunked_transfer_encoding off;
+    proxy_read_timeout      86400s;
+}
+```
+
+**5. Generate `.mcp.json` entry:**
+```json
+"<name>": {
+  "type": "http",
+  "url": "https://mcp.benoitpodwinski.com/<name>/mcp"
+}
+```
+
+**6. If the source has an OpenAPI spec (JSON/YAML):**
+Convert it to markdown (`<name>-api-reference.md`) with endpoints, params, schemas, and auth details. Delete the original JSON/YAML/SVG files — the server only loads `.md`.
+
+**7. Deploy:** `just deploy`
+
+**8. Verify:** `docker compose logs mcp-<name> | grep "Loaded"` on the server.
