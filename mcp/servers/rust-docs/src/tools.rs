@@ -1,13 +1,14 @@
-use rmcp::ServerHandler;
-use rmcp::model::ServerInfo;
+use rmcp::handler::server::wrapper::{Json, Parameters};
 use rmcp::schemars::JsonSchema;
-use serde::Deserialize;
+use rmcp::{ServerHandler, tool, tool_router};
+use rmcp::model::ServerInfo;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 #[derive(Clone)]
 struct DocEntry {
-    category: String, // ex: "leptos-use/animation", "axum/routing"
-    topic: String,    // nom du fichier sans .md
+    category: String,
+    topic: String,
     content: String,
 }
 
@@ -16,9 +17,9 @@ pub struct DocServer {
     docs: Vec<DocEntry>,
 }
 
-// --- Tool input types ---
+// --- Tool input/output types ---
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct SearchInput {
     /// Search query string
     pub query: String,
@@ -27,17 +28,22 @@ pub struct SearchInput {
     pub category: Option<String>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct GetDocInput {
     /// Full path: "category/topic", e.g. "leptos-use/animation/use_interval"
     pub path: String,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct ListTopicsInput {
     /// Filter by category prefix, e.g. "leptos-use", "leptos-use/animation", "axum" (optional)
     #[serde(default)]
     pub category: Option<String>,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct DocResult {
+    pub text: String,
 }
 
 // --- Load docs from filesystem ---
@@ -62,7 +68,7 @@ fn load_recursive(base: &Path, current: &Path, docs: &mut Vec<DocEntry>) {
         let path = entry.path();
         if path.is_dir() {
             load_recursive(base, &path, docs);
-        } else if path.extension().map(|e| e == "md").unwrap_or(false) {
+        } else if path.extension().is_some_and(|e| e == "md") {
             let rel = path.strip_prefix(base).unwrap_or(&path);
             let category = rel
                 .parent()
@@ -103,8 +109,8 @@ impl DocServer {
 
 #[tool_router]
 impl DocServer {
-    #[tool(description = "Search documentation across all loaded docs. Returns matching sections.")]
-    async fn search_docs(&self, #[tool(aggr)] input: SearchInput) -> String {
+    #[tool(name = "search_docs", description = "Search documentation across all loaded docs. Returns matching sections.")]
+    fn search_docs(&self, Parameters(input): Parameters<SearchInput>) -> Json<DocResult> {
         let query = input.query.to_lowercase();
         let results: Vec<_> = self
             .docs
@@ -116,10 +122,7 @@ impl DocServer {
                 let matches_cat = input
                     .category
                     .as_ref()
-                    .map(|c| {
-                        let c = c.to_lowercase();
-                        doc.category.to_lowercase().starts_with(&c)
-                    })
+                    .map(|c| doc.category.to_lowercase().starts_with(&c.to_lowercase()))
                     .unwrap_or(true);
                 matches_query && matches_cat
             })
@@ -127,17 +130,19 @@ impl DocServer {
             .map(|doc| format!("## [{}]\n\n{}", Self::full_path(doc), doc.content))
             .collect();
 
-        if results.is_empty() {
+        let text = if results.is_empty() {
             "No documentation found matching your query.".into()
         } else {
             format!("{} result(s):\n\n{}", results.len(), results.join("\n\n---\n\n"))
-        }
+        };
+        Json(DocResult { text })
     }
 
-    #[tool(description = "Get a specific documentation page by its full path (category/topic).")]
-    async fn get_doc(&self, #[tool(aggr)] input: GetDocInput) -> String {
+    #[tool(name = "get_doc", description = "Get a specific documentation page by its full path (category/topic).")]
+    fn get_doc(&self, Parameters(input): Parameters<GetDocInput>) -> Json<DocResult> {
         let path = input.path.to_lowercase();
-        self.docs
+        let text = self
+            .docs
             .iter()
             .find(|doc| Self::full_path(doc).to_lowercase() == path)
             .map(|doc| doc.content.clone())
@@ -146,11 +151,12 @@ impl DocServer {
                     "Documentation not found: {}. Use list_topics to see available paths.",
                     input.path
                 )
-            })
+            });
+        Json(DocResult { text })
     }
 
-    #[tool(description = "List available documentation topics, optionally filtered by category prefix.")]
-    async fn list_topics(&self, #[tool(aggr)] input: ListTopicsInput) -> String {
+    #[tool(name = "list_topics", description = "List available documentation topics, optionally filtered by category prefix.")]
+    fn list_topics(&self, Parameters(input): Parameters<ListTopicsInput>) -> Json<DocResult> {
         let topics: Vec<_> = self
             .docs
             .iter()
@@ -168,7 +174,7 @@ impl DocServer {
             .map(|doc| format!("- {}", Self::full_path(doc)))
             .collect();
 
-        if topics.is_empty() {
+        let text = if topics.is_empty() {
             "No documentation available.".into()
         } else {
             format!(
@@ -176,20 +182,20 @@ impl DocServer {
                 topics.len(),
                 topics.join("\n")
             )
-        }
+        };
+        Json(DocResult { text })
     }
 }
 
 impl ServerHandler for DocServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            instructions: Some(
-                "Documentation MCP server. Serves docs loaded from /docs directory. \
-                 Use search_docs to find information, get_doc to retrieve a specific page, \
-                 and list_topics to see what's available."
-                    .into(),
-            ),
-            ..Default::default()
-        }
+        let mut info = ServerInfo::default();
+        info.instructions = Some(
+            "Documentation MCP server. Serves docs loaded from the DOCS_PATH directory. \
+             Use search_docs to find information, get_doc to retrieve a specific page, \
+             and list_topics to see what's available."
+                .into(),
+        );
+        info
     }
 }

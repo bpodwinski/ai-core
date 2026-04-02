@@ -6,7 +6,12 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:deepwiki.com)",
       "WebFetch(domain:docs.rs)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cargo --version)",
+      "Bash(rustc --version)",
+      "Bash(docker --version)",
+      "Bash(just --version)",
+      "Read(//c/Users/Admin/.cargo/registry/src/**)"
     ]
   }
 }

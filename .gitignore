@@ -8,3 +8,7 @@ qdrant_data/
 **/*.sqlite-shm
 *.env
 *.env.*
+
+# Rust
+**/target/
+**/*.lock
