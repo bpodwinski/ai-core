@@ -11,8 +11,7 @@ services:
     environment:
       TUNNEL_TOKEN: "${MCP_TUNNEL_TOKEN}"
     depends_on:
-      nginx:
-        condition: service_healthy
+      - nginx
 
   nginx:
     image: nginx:alpine
@@ -26,11 +25,8 @@ services:
       - oauth
       - mcp-leptos
       - mcp-leptos-use
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      - mcp-rust
+      - mcp-induflow
 
   oauth:
     build: ./oauth/
@@ -41,11 +37,6 @@ services:
     environment:
       OAUTH_ISSUER: "${OAUTH_ISSUER}"
       MCP_API_KEY: "${MCP_API_KEY}"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/.well-known/oauth-authorization-server"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
 
   # Same image, different DOCS_PATH per service
   mcp-leptos:
@@ -66,3 +57,21 @@ services:
       - "80"
     environment:
       DOCS_PATH: /docs/leptos-use
+
+  mcp-rust:
+    image: mcp-rust-docs:local
+    container_name: mcp-rust
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      DOCS_PATH: /docs/rust
+
+  mcp-induflow:
+    image: mcp-rust-docs:local
+    container_name: mcp-induflow
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      DOCS_PATH: /docs/induflow
