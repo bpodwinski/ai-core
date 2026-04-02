@@ -2,19 +2,69 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "MCP Deploy",
+      "label": "MCP: Build Rust",
       "type": "shell",
-      "command": "bash",
-      "args": ["deploy.sh"],
-      "options": {
-        "cwd": "${workspaceFolder}/mcp"
-      },
+      "command": "just build",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
       "group": "build",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      },
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "MCP: Check",
+      "type": "shell",
+      "command": "just check",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "MCP: Docker Build",
+      "type": "shell",
+      "command": "just docker-build",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "MCP: Up",
+      "type": "shell",
+      "command": "just up",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Down",
+      "type": "shell",
+      "command": "just down",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Logs",
+      "type": "shell",
+      "command": "just logs",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Deploy",
+      "type": "shell",
+      "command": "just deploy",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Ship (Build + Deploy)",
+      "type": "shell",
+      "command": "just ship",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
+      "problemMatcher": "$rustc"
     }
   ]
 }
