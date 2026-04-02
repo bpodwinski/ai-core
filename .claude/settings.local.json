@@ -28,7 +28,8 @@
       "Bash(git -C /e/Dev/ai-core ls-files --others --exclude-standard mcp/)",
       "Bash(git -C /e/Dev/ai-core check-ignore mcp/.env.deploy mcp/.env mcp/target)",
       "Bash(git -C /e/Dev/ai-core log --oneline mcp/)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "WebFetch(domain:induflow.boschrexroth.com)"
     ]
   }
 }

@@ -11,6 +11,7 @@ RUN cargo build --release
 # Cloner les docs des repos communautaires
 RUN git clone --depth 1 https://github.com/leptos-rs/book /tmp/leptos-book
 RUN git clone --depth 1 https://github.com/synphonyte/leptos-use /tmp/leptos-use
+RUN git clone --depth 1 https://github.com/rust-lang/book /tmp/rust-book
 
 FROM debian:bookworm-slim
 
@@ -23,6 +24,12 @@ COPY --from=builder /tmp/leptos-book/src/ /docs/leptos/
 
 # Docs leptos-use
 COPY --from=builder /tmp/leptos-use/docs/book/src/ /docs/leptos-use/
+
+# Docs Rust Book officiel
+COPY --from=builder /tmp/rust-book/src/ /docs/rust/
+
+# Docs InduFlow (locales)
+COPY induflow/ /docs/induflow/
 
 EXPOSE 80
 ENV DOCS_PATH=/docs
