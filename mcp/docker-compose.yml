@@ -26,6 +26,7 @@ services:
       - mcp-leptos
       - mcp-leptos-use
       - mcp-rust
+      - mcp-daisyui
       - mcp-induflow
 
   oauth:
@@ -66,6 +67,15 @@ services:
       - "80"
     environment:
       DOCS_PATH: /docs/rust
+
+  mcp-daisyui:
+    image: mcp-rust-docs:local
+    container_name: mcp-daisyui
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      DOCS_PATH: /docs/daisyui
 
   mcp-induflow:
     image: mcp-rust-docs:local

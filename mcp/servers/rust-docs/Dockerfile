@@ -1,6 +1,6 @@
 FROM rust:1.94-slim AS builder
 
-RUN apt-get update && apt-get install -y pkg-config libssl-dev git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y pkg-config libssl-dev git curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock* ./
@@ -12,6 +12,7 @@ RUN cargo build --release
 RUN git clone --depth 1 https://github.com/leptos-rs/book /tmp/leptos-book
 RUN git clone --depth 1 https://github.com/synphonyte/leptos-use /tmp/leptos-use
 RUN git clone --depth 1 https://github.com/rust-lang/book /tmp/rust-book
+RUN curl -L https://daisyui.com/llms.txt -o /tmp/daisyui-docs.md
 
 FROM debian:bookworm-slim
 
@@ -27,6 +28,9 @@ COPY --from=builder /tmp/leptos-use/docs/book/src/ /docs/leptos-use/
 
 # Docs Rust Book officiel
 COPY --from=builder /tmp/rust-book/src/ /docs/rust/
+
+# Docs DaisyUI optimisées pour les assistants IA
+COPY --from=builder /tmp/daisyui-docs.md /docs/daisyui/reference.md
 
 # Docs InduFlow (locales)
 COPY induflow/ /docs/induflow/

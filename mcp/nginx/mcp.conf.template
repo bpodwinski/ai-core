@@ -58,6 +58,19 @@ server {
         proxy_read_timeout      86400s;
     }
 
+    # MCP DaisyUI
+    location /daisyui/ {
+        auth_request            /auth-check;
+        proxy_pass              http://mcp-daisyui:80/;
+        proxy_buffering         off;
+        proxy_cache             off;
+        proxy_set_header        Connection '';
+        proxy_set_header        Host $host;
+        proxy_http_version      1.1;
+        chunked_transfer_encoding off;
+        proxy_read_timeout      86400s;
+    }
+
     # MCP InduFlow PartHub API
     location /induflow/ {
         auth_request            /auth-check;
