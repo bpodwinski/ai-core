@@ -10,7 +10,7 @@ build:
 check:
     Set-Location {{rust-docs}}; cargo check
 
-# Build Docker image (shared by mcp-leptos + mcp-leptos-use)
+# Build Docker image (shared by all rust-docs MCP services)
 docker-build:
     docker compose build mcp-leptos
 

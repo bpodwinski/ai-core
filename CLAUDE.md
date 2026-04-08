@@ -82,6 +82,7 @@ Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → m
 | `/leptos/` | mcp-leptos | 60 | `github.com/leptos-rs/book` |
 | `/leptos-use/` | mcp-leptos-use | 98 | `github.com/synphonyte/leptos-use` |
 | `/rust/` | mcp-rust | 112 | `github.com/rust-lang/book` |
+| `/daisyui/` | mcp-daisyui | 1 | `https://daisyui.com/llms.txt` |
 | `/induflow/` | mcp-induflow | 8 | Local docs in `mcp/servers/rust-docs/induflow/` |
 
 ### MCP Commands
@@ -104,6 +105,7 @@ When the user asks to create a new MCP server, follow these steps:
 
 **1. Determine the doc source:**
 - **GitHub repo with markdown docs** → add `git clone` in Dockerfile
+- **Official `llms.txt` endpoint** → download it in Dockerfile and rename it to `.md`
 - **Local docs** → place `.md` files in `mcp/servers/rust-docs/<name>/` and `COPY` in Dockerfile
 
 **2. Update `mcp/servers/rust-docs/Dockerfile`:**
