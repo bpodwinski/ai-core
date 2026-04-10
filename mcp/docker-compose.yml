@@ -38,7 +38,7 @@ services:
       mcp-tailwindcss:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -54,7 +54,7 @@ services:
       OAUTH_ISSUER: "${OAUTH_ISSUER}"
       MCP_API_KEY: "${MCP_API_KEY}"
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/.well-known/oauth-authorization-server', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/.well-known/oauth-authorization-server', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -71,7 +71,7 @@ services:
     environment:
       DOCS_PATH: /docs/leptos
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -86,7 +86,7 @@ services:
     environment:
       DOCS_PATH: /docs/leptos-use
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -101,7 +101,7 @@ services:
     environment:
       DOCS_PATH: /docs/rust
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -116,7 +116,7 @@ services:
     environment:
       DOCS_PATH: /docs/daisyui
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -131,7 +131,7 @@ services:
     environment:
       DOCS_PATH: /docs/induflow
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -146,7 +146,7 @@ services:
     environment:
       DOCS_PATH: /docs/tailwindcss
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
