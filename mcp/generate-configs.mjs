@@ -4,16 +4,17 @@
  * à partir de mcp/servers-manifest.json.
  *
  * Usage :
- *   node mcp/generate-configs.mjs            # écrit dans dist/
- *   node mcp/generate-configs.mjs --check    # vérifie que dist/ est à jour (exit 1 si diff)
+ *   node mcp/generate-configs.mjs   # écrit dans dist/
+ *
+ * Les fichiers générés sont publiés automatiquement via GitHub Actions
+ * comme assets de la release "mcp-configs".
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const checkMode = process.argv.includes('--check');
 
 // ── Source de vérité ─────────────────────────────────────────────────────────
 const manifest = JSON.parse(
@@ -41,10 +42,10 @@ const claudeConfig = {
 function generateCodexToml() {
   const header = [
     '# Codex CLI — MCP servers configuration',
-    '# Source : https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-config.toml',
+    '# Source : https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml',
     '#',
     '# Installation :',
-    '#   curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-config.toml \\',
+    '#   curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml \\',
     '#        >> ~/.codex/config.toml',
     '#',
     '# Auth (choisir une option) :',
@@ -66,41 +67,15 @@ function generateCodexToml() {
 
 // ── Écriture ──────────────────────────────────────────────────────────────────
 const distDir = resolve(__dirname, '../dist');
+mkdirSync(distDir, { recursive: true });
 
 const outputs = [
-  {
-    path: resolve(distDir, 'claude-mcp.json'),
-    content: () => JSON.stringify(claudeConfig, null, 2) + '\n',
-  },
-  {
-    path: resolve(distDir, 'codex-config.toml'),
-    content: generateCodexToml,
-  },
+  { path: resolve(distDir, 'claude-mcp.json'), content: JSON.stringify(claudeConfig, null, 2) + '\n' },
+  { path: resolve(distDir, 'codex-config.toml'), content: generateCodexToml() },
 ];
 
-if (checkMode) {
-  let dirty = false;
-  for (const { path, content } of outputs) {
-    const expected = content();
-    if (!existsSync(path)) {
-      console.error(`MISSING: ${path}`);
-      dirty = true;
-    } else if (readFileSync(path, 'utf8') !== expected) {
-      console.error(`OUT OF DATE: ${path}`);
-      dirty = true;
-    }
-  }
-  if (dirty) {
-    console.error('\nRun: node mcp/generate-configs.mjs');
-    process.exit(1);
-  }
-  console.log('dist/ configs are up to date.');
-  process.exit(0);
-}
-
-mkdirSync(distDir, { recursive: true });
 for (const { path, content } of outputs) {
-  writeFileSync(path, content());
+  writeFileSync(path, content);
   console.log(`Written: ${path}`);
 }
 
