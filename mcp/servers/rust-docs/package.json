@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "dependencies": {
     "postcss": "^8.5.9",
     "remark": "^15.0.1",
