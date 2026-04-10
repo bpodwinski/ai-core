@@ -29,7 +29,7 @@ Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 Copier `.mcp.json` à la racine du projet :
 
 ```bash
-curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/claude-mcp.json > .mcp.json
+curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/claude-mcp.json > .mcp.json
 ```
 
 L'authentification est gérée automatiquement via OAuth 2.1 PKCE.
@@ -39,31 +39,34 @@ L'authentification est gérée automatiquement via OAuth 2.1 PKCE.
 Ajouter les serveurs à `~/.codex/config.toml` :
 
 ```bash
-curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml \
+curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/codex-config.toml \
      >> ~/.codex/config.toml
 ```
 
-Puis choisir une option d'authentification :
+Puis s'authentifier sur les serveurs self-hosted :
 
 ```bash
-# Option A — Bearer token
-export MCP_API_KEY=<your-key>
-
-# Option B — OAuth PKCE (par serveur)
+# OAuth PKCE (par serveur)
 codex mcp login leptos
 codex mcp login leptos-use
 codex mcp login rust
 codex mcp login daisyui
 codex mcp login induflow
 codex mcp login tailwindcss
+
+# GitHub (token personnel)
+export GITHUB_TOKEN=ghp_…
 ```
 
 ### Mettre à jour les configs
 
-Les configs sont publiées automatiquement par GitHub Actions comme assets de la
-release [`mcp-configs`](https://github.com/bpodwinski/ai-core/releases/tag/mcp-configs)
-dès que `mcp/servers-manifest.json` change. Pour regénérer localement :
+Les configs sont publiées automatiquement par GitHub Actions à chaque changement de
+`mcp/servers-manifest.json`. Chaque release est versionnée (`mcp-configs-YYYYMMDD-<run>`)
+et marquée comme latest — les URLs `/releases/latest/download/` pointent toujours
+sur la version la plus récente.
+
+[Voir toutes les releases →](https://github.com/bpodwinski/ai-core/releases)
 
 ```bash
-node mcp/generate-configs.mjs   # génère dist/ (gitignored)
+node mcp/generate-configs.mjs   # régénérer localement (dist/ gitignored)
 ```
