@@ -15,19 +15,38 @@ Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 | `induflow` | InduFlow PartHub API |
 | `tailwindcss` | Tailwind CSS v4 — docs + catalog complet |
 
-### Utiliser dans un projet
+### Claude Code
 
-**Claude Code** — copier `.mcp.json` à la racine du projet :
+Copier `.mcp.json` à la racine du projet :
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/claude-mcp.json > .mcp.json
 ```
 
-**Codex CLI** — copier dans la config globale (nécessite `MCP_API_KEY`) :
+L'authentification est gérée automatiquement via OAuth 2.1 PKCE.
+
+### Codex CLI
+
+Ajouter les serveurs à `~/.codex/config.toml` :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-mcp.json > ~/.codex/mcp_servers.json
+curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-config.toml \
+     >> ~/.codex/config.toml
+```
+
+Puis choisir une option d'authentification :
+
+```bash
+# Option A — Bearer token
 export MCP_API_KEY=<your-key>
+
+# Option B — OAuth PKCE (par serveur)
+codex mcp login leptos
+codex mcp login leptos-use
+codex mcp login rust
+codex mcp login daisyui
+codex mcp login induflow
+codex mcp login tailwindcss
 ```
 
 ### Mettre à jour les configs
