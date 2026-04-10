@@ -12,3 +12,7 @@ qdrant_data/
 # Rust
 **/target/
 **/*.lock
+
+# Node.js
+**/node_modules/
+**/package-lock.json

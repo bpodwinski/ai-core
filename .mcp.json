@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tailwindcss": {
+      "type": "http",
+      "url": "https://mcp.benoitpodwinski.com/tailwindcss/mcp"
+    }
+  }
+}

@@ -31,7 +31,20 @@
       "Bash(xargs wc:*)",
       "WebFetch(domain:induflow.boschrexroth.com)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Read(//c/Users/Admin/.claude/**)",
+      "Bash(rm -rf \"C:/Users/Admin/.claude/skills/rust-unit-tests\")",
+      "Bash(mkdir -p \"e:/Dev/ai-core/.claude/skills/rust-unit-tests\")",
+      "Edit(/.claude/skills/rust-unit-tests/**)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl -fsSL https://raw.githubusercontent.com/tailwindlabs/tailwindcss.com/main/src/docs/flex.mdx -o /e/Dev/ai-core/mcp/servers/rust-docs/.test-mdx/flex.mdx)",
+      "Bash(curl -fsSL https://raw.githubusercontent.com/tailwindlabs/tailwindcss.com/main/src/docs/display.mdx -o /e/Dev/ai-core/mcp/servers/rust-docs/.test-mdx/display.mdx)",
+      "Bash(npm install:*)",
+      "Bash(node strip-mdx.mjs .test-mdx/)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Admin\\.claude\\skills",
+      "e:\\Dev\\ai-core\\.claude\\skills\\rust-unit-tests"
     ]
   }
 }

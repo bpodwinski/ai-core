@@ -84,6 +84,19 @@ server {
         proxy_read_timeout      86400s;
     }
 
+    # MCP TailwindCSS
+    location /tailwindcss/ {
+        auth_request            /auth-check;
+        proxy_pass              http://mcp-tailwindcss:80/;
+        proxy_buffering         off;
+        proxy_cache             off;
+        proxy_set_header        Connection '';
+        proxy_set_header        Host $host;
+        proxy_http_version      1.1;
+        chunked_transfer_encoding off;
+        proxy_read_timeout      86400s;
+    }
+
     location /health {
         return 200 '{"status":"ok"}';
         add_header Content-Type application/json;

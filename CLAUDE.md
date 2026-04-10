@@ -61,6 +61,29 @@ The API layer (`api.py`) invokes scripts via `subprocess.run`, passing parameter
 
 ---
 
+## Skills (Claude Code + Codex CLI)
+
+Les skills réutilisables sont stockés en double dans deux répertoires, un par outil :
+
+| Outil | Répertoire |
+|-------|-----------|
+| Claude Code | `.claude/skills/<name>/SKILL.md` |
+| Codex CLI | `.agents/skills/<name>/SKILL.md` |
+
+Le format `SKILL.md` est identique car les deux outils implémentent la norme ouverte [Agent Skills](https://agentskills.io). Les champs frontmatter spécifiques à Claude Code (`allowed-tools`, `argument-hint`, `context`, etc.) sont ignorés par Codex CLI.
+
+Claude Code ne scanne pas `.agents/skills/` — les deux répertoires sont obligatoires.
+
+**Convention** : quand tu crées ou modifies un skill, mets à jour les deux répertoires en parallèle. La source de vérité est `.claude/skills/` — recopie ensuite dans `.agents/skills/`.
+
+### Skills disponibles
+
+| Skill | Description |
+|-------|-------------|
+| `rust-unit-tests` | Analyse un projet Rust et génère les tests unitaires manquants |
+
+---
+
 ## MCP Server Infrastructure
 
 Self-hosted MCP servers at `mcp/`, accessible via `https://mcp.benoitpodwinski.com/<name>/mcp`. All servers share a single Rust binary (`mcp-rust-docs`) serving different docs via `DOCS_PATH`.

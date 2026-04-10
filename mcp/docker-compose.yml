@@ -28,6 +28,7 @@ services:
       - mcp-rust
       - mcp-daisyui
       - mcp-induflow
+      - mcp-tailwindcss
 
   oauth:
     build: ./oauth/
@@ -85,3 +86,12 @@ services:
       - "80"
     environment:
       DOCS_PATH: /docs/induflow
+
+  mcp-tailwindcss:
+    image: mcp-rust-docs:local
+    container_name: mcp-tailwindcss
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      DOCS_PATH: /docs/tailwindcss
