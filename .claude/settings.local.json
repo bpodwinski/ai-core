@@ -40,11 +40,14 @@
       "Bash(curl -fsSL https://raw.githubusercontent.com/tailwindlabs/tailwindcss.com/main/src/docs/flex.mdx -o /e/Dev/ai-core/mcp/servers/rust-docs/.test-mdx/flex.mdx)",
       "Bash(curl -fsSL https://raw.githubusercontent.com/tailwindlabs/tailwindcss.com/main/src/docs/display.mdx -o /e/Dev/ai-core/mcp/servers/rust-docs/.test-mdx/display.mdx)",
       "Bash(npm install:*)",
-      "Bash(node strip-mdx.mjs .test-mdx/)"
+      "Bash(node strip-mdx.mjs .test-mdx/)",
+      "Bash(node generate-catalog.cjs /tmp/catalog-test.md)",
+      "Read(//tmp/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
-      "e:\\Dev\\ai-core\\.claude\\skills\\rust-unit-tests"
+      "e:\\Dev\\ai-core\\.claude\\skills\\rust-unit-tests",
+      "\\tmp"
     ]
   }
 }
