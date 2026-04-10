@@ -63,15 +63,23 @@ export GITHUB_TOKEN=ghp_…
 Le workflow [mcp-deploy.yml](.github/workflows/mcp-deploy.yml) se déclenche
 automatiquement sur push vers `main` quand des fichiers sous `mcp/` changent.
 
-Secrets GitHub requis (`Settings → Secrets → Actions`) :
+Utilise un **self-hosted runner** installé sur le serveur — pas de SSH sortant requis.
 
-| Secret | Exemple / comment obtenir |
-|--------|--------------------------|
-| `DEPLOY_SSH_KEY` | contenu de `~/.ssh/mcp_deploy` (clé privée) |
-| `DEPLOY_SSH_KNOWN_HOST` | `ssh-keyscan -p <PORT> <HOST>` → copier la sortie |
-| `DEPLOY_HOST` | `1.2.3.4` |
-| `DEPLOY_USER` | `ubuntu` |
-| `DEPLOY_PORT` | `22` |
+**Installation du runner** (une seule fois sur le serveur) :
+
+```bash
+# Repo Settings → Actions → Runners → New self-hosted runner → Linux
+# Suivre les instructions, puis installer comme service :
+sudo ./svc.sh install && sudo ./svc.sh start
+
+# Le runner doit avoir accès à Docker :
+sudo usermod -aG docker <runner-user>
+```
+
+Secret GitHub requis (`Settings → Secrets → Actions`) :
+
+| Secret | Exemple |
+|--------|---------|
 | `DEPLOY_PATH` | `/opt/mcp` |
 
 ### Mettre à jour les configs

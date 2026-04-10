@@ -35,7 +35,7 @@ RUN cd /tmp && \
 # ── Stage 3 : Runtime ─────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
 COPY --from=rust-builder /app/target/release/mcp-rust-docs /usr/local/bin/
 
