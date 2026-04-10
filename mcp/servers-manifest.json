@@ -1,0 +1,29 @@
+{
+  "baseUrl": "https://mcp.benoitpodwinski.com",
+  "servers": [
+    {
+      "name": "leptos",
+      "description": "Leptos framework — official book (github.com/leptos-rs/book)"
+    },
+    {
+      "name": "leptos-use",
+      "description": "leptos-use hooks library (github.com/synphonyte/leptos-use)"
+    },
+    {
+      "name": "rust",
+      "description": "The Rust Programming Language book (github.com/rust-lang/book)"
+    },
+    {
+      "name": "daisyui",
+      "description": "DaisyUI component library reference (daisyui.com/llms.txt)"
+    },
+    {
+      "name": "induflow",
+      "description": "InduFlow PartHub API documentation"
+    },
+    {
+      "name": "tailwindcss",
+      "description": "Tailwind CSS v4 — docs + catalog complet des classes"
+    }
+  ]
+}

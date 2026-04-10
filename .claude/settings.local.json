@@ -52,12 +52,15 @@
       "Bash(node /e/Dev/ai-core/mcp/servers/rust-docs/generate-catalog.mjs /tmp/catalog-v4-test.md)",
       "Bash(node --max-old-space-size=4096 /e/Dev/ai-core/mcp/servers/rust-docs/generate-catalog.mjs /tmp/catalog-v4-test.md)",
       "Bash(node --max-old-space-size=512 -e ':*)",
-      "Bash(node generate-catalog.mjs /tmp/catalog-v4-test.md)"
+      "Bash(node generate-catalog.mjs /tmp/catalog-v4-test.md)",
+      "Bash(git remote:*)",
+      "Bash(node mcp/generate-configs.mjs)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
       "e:\\Dev\\ai-core\\.claude\\skills\\rust-unit-tests",
-      "\\tmp"
+      "\\tmp",
+      "E:\\Dev\\ai-core"
     ]
   }
 }
