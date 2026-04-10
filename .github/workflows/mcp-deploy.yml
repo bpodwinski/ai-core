@@ -1,0 +1,53 @@
+name: Deploy MCP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp/**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync mcp/ → server
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT }}
+          REMOTE_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -az --delete \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='node_modules/' \
+            --exclude='servers/rust-docs/target/' \
+            -e "ssh -p $PORT -i ~/.ssh/deploy_key" \
+            mcp/ \
+            "$USER@$HOST:$REMOTE_PATH/"
+
+      - name: Rebuild containers
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT }}
+          REMOTE_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -p "$PORT" -i ~/.ssh/deploy_key "$USER@$HOST" \
+            "cd '$REMOTE_PATH' && docker compose up -d --build --force-recreate"

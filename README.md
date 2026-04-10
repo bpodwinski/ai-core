@@ -58,6 +58,21 @@ codex mcp login tailwindcss
 export GITHUB_TOKEN=ghp_…
 ```
 
+### Déployer
+
+Le workflow [mcp-deploy.yml](.github/workflows/mcp-deploy.yml) se déclenche
+automatiquement sur push vers `main` quand des fichiers sous `mcp/` changent.
+
+Secrets GitHub requis (`Settings → Secrets → Actions`) :
+
+| Secret | Exemple |
+|--------|---------|
+| `DEPLOY_SSH_KEY` | contenu de `~/.ssh/mcp_deploy` (clé privée) |
+| `DEPLOY_HOST` | `1.2.3.4` |
+| `DEPLOY_USER` | `ubuntu` |
+| `DEPLOY_PORT` | `22` |
+| `DEPLOY_PATH` | `/opt/mcp` |
+
 ### Mettre à jour les configs
 
 Les configs sont publiées automatiquement par GitHub Actions à chaque changement de
