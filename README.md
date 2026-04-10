@@ -20,7 +20,7 @@ Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 Copier `.mcp.json` à la racine du projet :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/claude-mcp.json > .mcp.json
+curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/claude-mcp.json > .mcp.json
 ```
 
 L'authentification est gérée automatiquement via OAuth 2.1 PKCE.
@@ -30,7 +30,7 @@ L'authentification est gérée automatiquement via OAuth 2.1 PKCE.
 Ajouter les serveurs à `~/.codex/config.toml` :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-config.toml \
+curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml \
      >> ~/.codex/config.toml
 ```
 
@@ -51,10 +51,10 @@ codex mcp login tailwindcss
 
 ### Mettre à jour les configs
 
-Les fichiers `dist/` sont regénérés automatiquement par GitHub Actions dès que
-`mcp/servers-manifest.json` change. Pour regénérer localement :
+Les configs sont publiées automatiquement par GitHub Actions comme assets de la
+release [`mcp-configs`](https://github.com/bpodwinski/ai-core/releases/tag/mcp-configs)
+dès que `mcp/servers-manifest.json` change. Pour regénérer localement :
 
 ```bash
-node mcp/generate-configs.mjs          # génère dist/
-node mcp/generate-configs.mjs --check  # vérifie que dist/ est à jour
+node mcp/generate-configs.mjs   # génère dist/ (gitignored)
 ```

@@ -55,7 +55,8 @@
       "Bash(node generate-catalog.mjs /tmp/catalog-v4-test.md)",
       "Bash(git remote:*)",
       "Bash(node mcp/generate-configs.mjs)",
-      "Bash(node /e/Dev/ai-core/mcp/generate-configs.mjs)"
+      "Bash(node /e/Dev/ai-core/mcp/generate-configs.mjs)",
+      "Bash(git rm:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",

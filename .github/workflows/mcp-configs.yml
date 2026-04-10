@@ -25,14 +25,16 @@ jobs:
       - name: Generate MCP configs
         run: node mcp/generate-configs.mjs
 
-      - name: Commit dist/ if changed
+      - name: Publish to GitHub Releases (rolling mcp-configs tag)
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add dist/claude-mcp.json dist/codex-config.toml
-          if git diff --cached --quiet; then
-            echo "No changes — skipping commit."
-          else
-            git commit -m "chore: regenerate MCP configs [skip ci]"
-            git push
-          fi
+          # Supprimer release + tag existants pour pouvoir recréer proprement
+          gh release delete mcp-configs --yes --cleanup-tag 2>/dev/null || true
+          # Créer la nouvelle release avec les assets mis à jour
+          gh release create mcp-configs \
+            --title "MCP Configs" \
+            --notes "Configurations MCP auto-générées. Voir README pour l'utilisation." \
+            --latest=false \
+            dist/claude-mcp.json \
+            dist/codex-config.toml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
