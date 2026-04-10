@@ -21,61 +21,73 @@ const manifest = JSON.parse(
 );
 const { baseUrl, servers } = manifest;
 
-// ── Claude Code : .mcp.json ───────────────────────────────────────────────────
-// Utilise le flux OAuth 2.1 PKCE intégré à Claude Code (pas d'auth explicite).
-// Copier ce fichier à la racine du projet sous le nom .mcp.json
+// ── Claude Code : claude-mcp.json → .mcp.json ────────────────────────────────
+// OAuth 2.1 PKCE géré nativement par Claude Code (pas d'auth explicite).
+// Copier à la racine du projet : curl … > .mcp.json
 const claudeConfig = {
   mcpServers: Object.fromEntries(
     servers.map(s => [
       s.name,
-      {
-        type: 'http',
-        url: `${baseUrl}/${s.name}/mcp`
-      }
+      { type: 'http', url: `${baseUrl}/${s.name}/mcp` }
     ])
   )
 };
 
-// ── Codex CLI : codex-mcp.json ────────────────────────────────────────────────
-// Utilise un Bearer token explicite via la variable d'environnement MCP_API_KEY.
-// Copier ce fichier dans ~/.codex/mcp_servers.json
-// (ou merger dans ~/.codex/config.json sous la clé "mcpServers")
-const codexConfig = {
-  mcpServers: Object.fromEntries(
-    servers.map(s => [
-      s.name,
-      {
-        type: 'http',
-        url: `${baseUrl}/${s.name}/mcp`,
-        headers: {
-          Authorization: 'Bearer ${MCP_API_KEY}'
-        }
-      }
-    ])
-  )
-};
+// ── Codex CLI : codex-config.toml → ~/.codex/config.toml ─────────────────────
+// Format TOML avec [mcp_servers.<name>] tables.
+// Deux options d'auth :
+//   - bearer_token_env_var : token statique dans MCP_API_KEY
+//   - OAuth PKCE           : après ajout, lancer `codex mcp login <name>`
+function generateCodexToml() {
+  const header = [
+    '# Codex CLI — MCP servers configuration',
+    '# Source : https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-config.toml',
+    '#',
+    '# Installation :',
+    '#   curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-config.toml \\',
+    '#        >> ~/.codex/config.toml',
+    '#',
+    '# Auth (choisir une option) :',
+    '#   Option A — Bearer token : export MCP_API_KEY=<your-key>',
+    '#   Option B — OAuth PKCE   : codex mcp login <server-name>',
+    '',
+  ].join('\n');
+
+  const blocks = servers.map(s => [
+    `[mcp_servers.${s.name}]`,
+    `url = "${baseUrl}/${s.name}/mcp"`,
+    `bearer_token_env_var = "MCP_API_KEY"`,
+    `# description = "${s.description}"`,
+    '',
+  ].join('\n'));
+
+  return header + blocks.join('\n');
+}
 
 // ── Écriture ──────────────────────────────────────────────────────────────────
 const distDir = resolve(__dirname, '../dist');
 
 const outputs = [
-  { path: resolve(distDir, 'claude-mcp.json'), data: claudeConfig },
-  { path: resolve(distDir, 'codex-mcp.json'),  data: codexConfig  }
+  {
+    path: resolve(distDir, 'claude-mcp.json'),
+    content: () => JSON.stringify(claudeConfig, null, 2) + '\n',
+  },
+  {
+    path: resolve(distDir, 'codex-config.toml'),
+    content: generateCodexToml,
+  },
 ];
 
 if (checkMode) {
   let dirty = false;
-  for (const { path, data } of outputs) {
-    const expected = JSON.stringify(data, null, 2) + '\n';
+  for (const { path, content } of outputs) {
+    const expected = content();
     if (!existsSync(path)) {
       console.error(`MISSING: ${path}`);
       dirty = true;
-    } else {
-      const current = readFileSync(path, 'utf8');
-      if (current !== expected) {
-        console.error(`OUT OF DATE: ${path}`);
-        dirty = true;
-      }
+    } else if (readFileSync(path, 'utf8') !== expected) {
+      console.error(`OUT OF DATE: ${path}`);
+      dirty = true;
     }
   }
   if (dirty) {
@@ -87,14 +99,9 @@ if (checkMode) {
 }
 
 mkdirSync(distDir, { recursive: true });
-for (const { path, data } of outputs) {
-  writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
+for (const { path, content } of outputs) {
+  writeFileSync(path, content());
   console.log(`Written: ${path}`);
 }
 
 console.log(`\n${servers.length} servers — configs générées dans dist/`);
-console.log(`\nTéléchargement :`);
-console.log(`  # Claude Code`);
-console.log(`  curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/claude-mcp.json > .mcp.json`);
-console.log(`\n  # Codex CLI`);
-console.log(`  curl -fsSL https://raw.githubusercontent.com/bpodwinski/ai-core/main/dist/codex-mcp.json > ~/.codex/mcp_servers.json`);
