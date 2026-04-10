@@ -15,9 +15,13 @@ RUN git clone --depth 1 https://github.com/rust-lang/book /tmp/rust-book
 RUN curl -L https://daisyui.com/llms.txt -o /tmp/daisyui-docs.md
 RUN git clone --depth 1 https://github.com/tailwindlabs/tailwindcss.com /tmp/tailwindcss-site
 COPY strip-mdx.mjs /tmp/strip-mdx.mjs
+COPY generate-catalog.cjs /tmp/generate-catalog.cjs
 RUN echo '{"type":"module"}' > /tmp/package.json && \
-    cd /tmp && npm install --save --silent remark remark-mdx unist-util-visit unist-util-remove && \
-    node strip-mdx.mjs /tmp/tailwindcss-site/src/docs/
+    cd /tmp && npm install --save --silent \
+      remark remark-mdx unist-util-visit unist-util-remove \
+      tailwindcss@3 postcss && \
+    node strip-mdx.mjs /tmp/tailwindcss-site/src/docs/ && \
+    node generate-catalog.cjs /tmp/tailwindcss-site/src/docs/catalog.md
 
 FROM debian:bookworm-slim
 
