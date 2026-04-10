@@ -1,6 +1,6 @@
 FROM rust:1.94-slim AS builder
 
-RUN apt-get update && apt-get install -y pkg-config libssl-dev git curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y pkg-config libssl-dev git curl nodejs npm && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock* ./
@@ -13,6 +13,11 @@ RUN git clone --depth 1 https://github.com/leptos-rs/book /tmp/leptos-book
 RUN git clone --depth 1 https://github.com/synphonyte/leptos-use /tmp/leptos-use
 RUN git clone --depth 1 https://github.com/rust-lang/book /tmp/rust-book
 RUN curl -L https://daisyui.com/llms.txt -o /tmp/daisyui-docs.md
+RUN git clone --depth 1 https://github.com/tailwindlabs/tailwindcss.com /tmp/tailwindcss-site
+COPY strip-mdx.mjs /tmp/strip-mdx.mjs
+RUN echo '{"type":"module"}' > /tmp/package.json && \
+    cd /tmp && npm install --save --silent remark remark-mdx unist-util-visit unist-util-remove && \
+    node strip-mdx.mjs /tmp/tailwindcss-site/src/docs/
 
 FROM debian:bookworm-slim
 
@@ -34,6 +39,9 @@ COPY --from=builder /tmp/daisyui-docs.md /docs/daisyui/reference.md
 
 # Docs InduFlow (locales)
 COPY induflow/ /docs/induflow/
+
+# Docs TailwindCSS (194 pages, MDX converti en Markdown propre par remark)
+COPY --from=builder /tmp/tailwindcss-site/src/docs/ /docs/tailwindcss/
 
 EXPOSE 80
 ENV DOCS_PATH=/docs
