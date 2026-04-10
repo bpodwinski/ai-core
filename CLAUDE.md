@@ -107,6 +107,7 @@ Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → m
 | `/rust/` | mcp-rust | 112 | `github.com/rust-lang/book` |
 | `/daisyui/` | mcp-daisyui | 1 | `https://daisyui.com/llms.txt` |
 | `/induflow/` | mcp-induflow | 8 | Local docs in `mcp/servers/rust-docs/induflow/` |
+| `/tailwindcss/` | mcp-tailwindcss | 195 | `github.com/tailwindlabs/tailwindcss.com` + catalog généré |
 
 ### MCP Commands
 
