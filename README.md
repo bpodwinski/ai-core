@@ -65,9 +65,10 @@ automatiquement sur push vers `main` quand des fichiers sous `mcp/` changent.
 
 Secrets GitHub requis (`Settings → Secrets → Actions`) :
 
-| Secret | Exemple |
-|--------|---------|
+| Secret | Exemple / comment obtenir |
+|--------|--------------------------|
 | `DEPLOY_SSH_KEY` | contenu de `~/.ssh/mcp_deploy` (clé privée) |
+| `DEPLOY_SSH_KNOWN_HOST` | `ssh-keyscan -p <PORT> <HOST>` → copier la sortie |
 | `DEPLOY_HOST` | `1.2.3.4` |
 | `DEPLOY_USER` | `ubuntu` |
 | `DEPLOY_PORT` | `22` |
