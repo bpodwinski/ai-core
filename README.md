@@ -22,6 +22,7 @@ Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 | Serveur | Contenu |
 |---------|---------|
 | `openai-docs` | OpenAI developer docs — API, Codex, ChatGPT Apps SDK |
+| `github` | GitHub — PRs, issues, repos (`export GITHUB_TOKEN=…`) |
 
 ### Claude Code
 

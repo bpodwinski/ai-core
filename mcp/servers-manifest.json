@@ -31,6 +31,12 @@
       "name": "openai-docs",
       "url": "https://developers.openai.com/mcp",
       "description": "OpenAI developer documentation (API, Codex, ChatGPT Apps SDK)"
+    },
+    {
+      "name": "github",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "description": "GitHub — PRs, issues, repos (github/github-mcp-server)",
+      "bearer_token_env_var": "GITHUB_TOKEN"
     }
   ]
 }

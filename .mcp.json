@@ -27,6 +27,10 @@
     "openai-docs": {
       "type": "http",
       "url": "https://developers.openai.com/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
     }
   }
 }

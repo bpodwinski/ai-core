@@ -54,30 +54,33 @@ function generateCodexToml() {
     '#   curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml \\',
     '#        >> ~/.codex/config.toml',
     '#',
-    '# Auth self-hosted (choisir une option) :',
-    '#   Option A — Bearer token : export MCP_API_KEY=<your-key>',
-    '#   Option B — OAuth PKCE   : codex mcp login <server-name>',
+    '# Auth self-hosted — OAuth PKCE : codex mcp login <server-name>',
     '',
   ].join('\n');
 
   const selfHostedBlocks = servers.map(s => [
     `[mcp_servers.${s.name}]`,
     `url = "${baseUrl}/${s.name}/mcp"`,
-    `bearer_token_env_var = "MCP_API_KEY"`,
     `# description = "${s.description}"`,
     '',
   ].join('\n'));
 
   const externalHeader = external.length > 0
-    ? '# ── External MCP servers (no auth required) ──────────────────────────────────\n\n'
+    ? '# ── External MCP servers ─────────────────────────────────────────────────────\n\n'
     : '';
 
-  const externalBlocks = external.map(s => [
-    `[mcp_servers.${s.name}]`,
-    `url = "${s.url}"`,
-    `# description = "${s.description}"`,
-    '',
-  ].join('\n'));
+  const externalBlocks = external.map(s => {
+    const lines = [
+      `[mcp_servers.${s.name}]`,
+      `url = "${s.url}"`,
+    ];
+    if (s.bearer_token_env_var) {
+      lines.push(`bearer_token_env_var = "${s.bearer_token_env_var}"`);
+    }
+    lines.push(`# description = "${s.description}"`);
+    lines.push('');
+    return lines.join('\n');
+  });
 
   return header
     + selfHostedBlocks.join('\n')
