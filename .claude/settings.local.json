@@ -47,7 +47,12 @@
       "Bash(git -C /e/Dev/ai-core ls-files --others --exclude-standard)",
       "Bash(git -C /e/Dev/ai-core log --oneline -5)",
       "Bash(git -C /e/Dev/ai-core ls-files mcp/servers/rust-docs/)",
-      "Bash(git -C /e/Dev/ai-core check-ignore -v mcp/servers/rust-docs/Cargo.lock)"
+      "Bash(git -C /e/Dev/ai-core check-ignore -v mcp/servers/rust-docs/Cargo.lock)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(node /e/Dev/ai-core/mcp/servers/rust-docs/generate-catalog.mjs /tmp/catalog-v4-test.md)",
+      "Bash(node --max-old-space-size=4096 /e/Dev/ai-core/mcp/servers/rust-docs/generate-catalog.mjs /tmp/catalog-v4-test.md)",
+      "Bash(node --max-old-space-size=512 -e ':*)",
+      "Bash(node generate-catalog.mjs /tmp/catalog-v4-test.md)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",

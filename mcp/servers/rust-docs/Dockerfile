@@ -27,10 +27,10 @@ RUN cd /tmp && npm install --silent
 
 # Traiter les docs TailwindCSS
 COPY strip-mdx.mjs /tmp/strip-mdx.mjs
-COPY generate-catalog.cjs /tmp/generate-catalog.cjs
+COPY generate-catalog.mjs /tmp/generate-catalog.mjs
 RUN cd /tmp && \
     node strip-mdx.mjs /tmp/tailwindcss-site/src/docs/ && \
-    node generate-catalog.cjs /tmp/tailwindcss-site/src/docs/catalog.md
+    node generate-catalog.mjs /tmp/tailwindcss-site/src/docs/catalog.md
 
 # ── Stage 3 : Runtime ─────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
