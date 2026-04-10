@@ -56,13 +56,30 @@
       "Bash(git remote:*)",
       "Bash(node mcp/generate-configs.mjs)",
       "Bash(node /e/Dev/ai-core/mcp/generate-configs.mjs)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(echo '{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"e:\\\\\\\\Dev\\\\\\\\ai-core\\\\\\\\.claude\\\\\\\\skills\\\\\\\\rust-unit-tests\\\\\\\\SKILL.md\",\"content\":\"test\"}}')",
+      "Bash(python \"e:\\\\Dev\\\\ai-core\\\\.claude\\\\hooks\\\\sync-skill.py\")",
+      "Bash(printf '{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"e:\\\\\\\\\\\\\\\\Dev\\\\\\\\\\\\\\\\ai-core\\\\\\\\\\\\\\\\.claude\\\\\\\\\\\\\\\\skills\\\\\\\\\\\\\\\\rust-unit-tests\\\\\\\\\\\\\\\\SKILL.md\",\"content\":\"test\"}}')",
+      "Bash(python -c ':*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
       "e:\\Dev\\ai-core\\.claude\\skills\\rust-unit-tests",
       "\\tmp",
       "E:\\Dev\\ai-core"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/sync-skill.py"
+          }
+        ]
+      }
     ]
   }
 }
