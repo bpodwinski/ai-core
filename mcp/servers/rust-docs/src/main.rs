@@ -32,7 +32,9 @@ async fn main() -> anyhow::Result<()> {
         StreamableHttpServerConfig::default().with_cancellation_token(ct.child_token()),
     );
 
-    let router = axum::Router::new().fallback_service(service);
+    let router = axum::Router::new()
+        .route("/health", axum::routing::get(|| async { r#"{"status":"ok"}"# }))
+        .fallback_service(service);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await?;
     tracing::info!("MCP rust-docs server listening on port 80");
