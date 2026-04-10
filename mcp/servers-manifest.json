@@ -25,5 +25,12 @@
       "name": "tailwindcss",
       "description": "Tailwind CSS v4 — docs + catalog complet des classes"
     }
+  ],
+  "external": [
+    {
+      "name": "openai-docs",
+      "url": "https://developers.openai.com/mcp",
+      "description": "OpenAI developer documentation (API, Codex, ChatGPT Apps SDK)"
+    }
   ]
 }
