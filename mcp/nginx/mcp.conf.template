@@ -1,12 +1,31 @@
+# Rate limiting — 10 req/s par IP pour les endpoints MCP (SSE long-lived)
+# Burst de 20 autorisé sans délai, au-delà retourne 429
+limit_req_zone $binary_remote_addr zone=mcp_limit:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=oauth_limit:10m rate=5r/s;
+
 server {
     listen 80;
 
-    # OAuth discovery + endpoints (pas d'auth)
+    # Security headers globaux
+    add_header X-Content-Type-Options  "nosniff"       always;
+    add_header X-Frame-Options         "DENY"          always;
+    add_header X-XSS-Protection        "1; mode=block" always;
+    add_header Referrer-Policy         "no-referrer"   always;
+
+    # Masquer la version nginx
+    server_tokens off;
+
+    # Limiter la taille des requêtes (pas de body attendu sur les MCPs)
+    client_max_body_size 1m;
+
+    # OAuth discovery + endpoints (pas d'auth, rate limit dédié)
     location /.well-known/ {
+        limit_req zone=oauth_limit burst=10 nodelay;
         proxy_pass http://oauth:8080;
     }
 
     location /oauth/ {
+        limit_req zone=oauth_limit burst=10 nodelay;
         proxy_pass http://oauth:8080;
     }
 
@@ -21,6 +40,7 @@ server {
 
     # MCP Leptos — docs Leptos custom
     location /leptos/ {
+        limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
         proxy_pass              http://mcp-leptos:80/;
         proxy_buffering         off;
@@ -34,6 +54,7 @@ server {
 
     # MCP leptos-use — docs leptos-use (clonées depuis GitHub)
     location /leptos-use/ {
+        limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
         proxy_pass              http://mcp-leptos-use:80/;
         proxy_buffering         off;
@@ -47,6 +68,7 @@ server {
 
     # MCP Rust Book
     location /rust/ {
+        limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
         proxy_pass              http://mcp-rust:80/;
         proxy_buffering         off;
@@ -60,6 +82,7 @@ server {
 
     # MCP DaisyUI
     location /daisyui/ {
+        limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
         proxy_pass              http://mcp-daisyui:80/;
         proxy_buffering         off;
@@ -73,6 +96,7 @@ server {
 
     # MCP InduFlow PartHub API
     location /induflow/ {
+        limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
         proxy_pass              http://mcp-induflow:80/;
         proxy_buffering         off;
@@ -86,6 +110,7 @@ server {
 
     # MCP TailwindCSS
     location /tailwindcss/ {
+        limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
         proxy_pass              http://mcp-tailwindcss:80/;
         proxy_buffering         off;
@@ -98,6 +123,7 @@ server {
     }
 
     location /health {
+        access_log off;
         return 200 '{"status":"ok"}';
         add_header Content-Type application/json;
     }
