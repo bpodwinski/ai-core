@@ -1,4 +1,5 @@
 # CLAUDE.md — mcp/
+<!-- sync: AGENTS.md est généré automatiquement depuis ce fichier -->
 
 Infrastructure MCP auto-hébergée exposant des serveurs de documentation via HTTPS.  
 URL publique : `https://mcp.benoitpodwinski.com/<name>/mcp`
