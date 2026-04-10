@@ -48,10 +48,10 @@ const claudeConfig = {
 function generateCodexToml() {
   const header = [
     '# Codex CLI — MCP servers configuration',
-    '# Source : https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml',
+    '# Source : https://github.com/bpodwinski/ai-core/releases/latest/download/codex-config.toml',
     '#',
     '# Installation :',
-    '#   curl -fsSL https://github.com/bpodwinski/ai-core/releases/download/mcp-configs/codex-config.toml \\',
+    '#   curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/codex-config.toml \\',
     '#        >> ~/.codex/config.toml',
     '#',
     '# Auth self-hosted — OAuth PKCE : codex mcp login <server-name>',

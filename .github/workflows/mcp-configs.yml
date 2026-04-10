@@ -25,15 +25,13 @@ jobs:
       - name: Generate MCP configs
         run: node mcp/generate-configs.mjs
 
-      - name: Publish to GitHub Releases (rolling mcp-configs tag)
+      - name: Publish versioned GitHub Release
         run: |
-          # Supprimer release + tag existants pour pouvoir recréer proprement
-          gh release delete mcp-configs --yes --cleanup-tag 2>/dev/null || true
-          # Créer la nouvelle release avec les assets mis à jour
-          gh release create mcp-configs \
-            --title "MCP Configs" \
-            --notes "Configurations MCP auto-générées. Voir README pour l'utilisation." \
-            --latest=false \
+          TAG="mcp-configs-$(date -u +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$TAG" \
+            --title "MCP Configs ${TAG#mcp-configs-}" \
+            --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`." \
+            --latest \
             dist/claude-mcp.json \
             dist/codex-config.toml
         env:
