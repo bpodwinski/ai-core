@@ -6,6 +6,8 @@ Infrastructure Docker personnelle : n8n, Qdrant, serveurs MCP self-hosted.
 
 Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 
+**Self-hosted** (`mcp.benoitpodwinski.com`) :
+
 | Serveur | Contenu |
 |---------|---------|
 | `leptos` | Leptos framework book |
@@ -14,6 +16,12 @@ Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 | `daisyui` | DaisyUI component library |
 | `induflow` | InduFlow PartHub API |
 | `tailwindcss` | Tailwind CSS v4 — docs + catalog complet |
+
+**Externes** (publics, sans auth) :
+
+| Serveur | Contenu |
+|---------|---------|
+| `openai-docs` | OpenAI developer docs — API, Codex, ChatGPT Apps SDK |
 
 ### Claude Code
 
