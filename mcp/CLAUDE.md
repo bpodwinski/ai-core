@@ -144,6 +144,30 @@ Puis régénérer : `node generate-configs.mjs && cp dist/claude-mcp.json ../.mc
 
 ---
 
+## Outils d'analyse de crates Rust (rust-docs-mcp)
+
+Le serveur `mcp-docs` embarque `rust-docs-mcp` (snowmead) comme subprocess persistant. Il génère le rustdoc JSON à la demande et expose des outils d'analyse de crates sur le même endpoint `/mcp`.
+
+**Mettre une crate en cache** — dire à Claude :
+> "Cache la crate axum version 0.8.8"
+
+**Outils disponibles :**
+
+| Tool | Description |
+|------|-------------|
+| `cache_crate` | Télécharge et cache une crate (cratesio / github / local) |
+| `list_cached_crates` | Liste les crates en cache avec leur taille |
+| `search_crate_items` | Recherche d'items par pattern (champs requis : `crate_name`, `version`, `pattern`) |
+| `get_item_details` | Signature complète + docs d'un item (`item_id` est un entier i32) |
+| `get_item_source` | Code source d'un item |
+| `get_crate_dependencies` | Arbre de dépendances |
+
+**Cache** persistant dans le volume Docker `rust_docs_cache`.
+
+**Prérequis runtime :** toolchain nightly dans le container (`RUST_DOCS_MCP_TOOLCHAIN=nightly`, installé via rustup dans le Dockerfile).
+
+---
+
 ## Ajouter une nouvelle source de docs (config-driven)
 
 Le build est piloté par `servers-manifest.json`. Ajouter une doc source = **modifier uniquement le manifest** (pas de Dockerfile/docker-compose/nginx à toucher).
