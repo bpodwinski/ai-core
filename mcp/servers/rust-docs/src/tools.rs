@@ -72,6 +72,18 @@ pub struct CacheCrateInput {
     /// Filesystem path for source_type "local"
     #[serde(default)]
     pub path: Option<String>,
+    /// For workspace crates: specific members to cache (e.g. ["crates/rmcp"])
+    #[serde(default)]
+    pub members: Option<Vec<String>>,
+    /// Force re-download even if already cached
+    #[serde(default)]
+    pub update: Option<bool>,
+    /// List of features to enable — NOTE: not supported by cache tools, ignored
+    #[serde(default)]
+    pub features: Option<Vec<String>>,
+    /// Disable default features — NOTE: not supported by cache tools, ignored
+    #[serde(default)]
+    pub no_default_features: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
@@ -80,6 +92,9 @@ pub struct CrateNameInput {
     pub crate_name: String,
     /// Version of the cached crate (e.g. "0.8.8")
     pub version: String,
+    /// For workspace crates: member path (e.g. "crates/rmcp")
+    #[serde(default)]
+    pub member: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -93,6 +108,18 @@ pub struct SearchCrateItemsInput {
     /// Filter by item kind: "function", "struct", "trait", "enum", "type", "macro", "mod" (optional)
     #[serde(default)]
     pub kind_filter: Option<String>,
+    /// Max results to return
+    #[serde(default)]
+    pub limit: Option<i64>,
+    /// Pagination offset
+    #[serde(default)]
+    pub offset: Option<i64>,
+    /// Filter by module path prefix (e.g. "axum::routing")
+    #[serde(default)]
+    pub path_filter: Option<String>,
+    /// For workspace crates: member path
+    #[serde(default)]
+    pub member: Option<String>,
     /// Return only item IDs, names, and types (lighter response)
     #[serde(default)]
     pub preview: Option<bool>,
@@ -106,6 +133,9 @@ pub struct GetItemInput {
     pub version: String,
     /// Numeric item ID (from search results)
     pub item_id: i32,
+    /// For workspace crates: member path
+    #[serde(default)]
+    pub member: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -119,6 +149,68 @@ pub struct GetItemSourceInput {
     /// Number of surrounding context lines (default: 3)
     #[serde(default)]
     pub context_lines: Option<i64>,
+    /// For workspace crates: member path
+    #[serde(default)]
+    pub member: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct ListCrateItemsInput {
+    /// Name of the cached crate
+    pub crate_name: String,
+    /// Version of the cached crate
+    pub version: String,
+    /// Filter by item kind: "function", "struct", "trait", "enum", "type", "macro", "mod"
+    #[serde(default)]
+    pub kind_filter: Option<String>,
+    /// Max results (default 100)
+    #[serde(default)]
+    pub limit: Option<i64>,
+    /// Pagination offset
+    #[serde(default)]
+    pub offset: Option<i64>,
+    /// For workspace crates: member path
+    #[serde(default)]
+    pub member: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct SearchItemsFuzzyInput {
+    /// Name of the cached crate
+    pub crate_name: String,
+    /// Version of the cached crate
+    pub version: String,
+    /// Search query
+    pub query: String,
+    /// Filter by item kind
+    #[serde(default)]
+    pub kind_filter: Option<String>,
+    /// Max results
+    #[serde(default)]
+    pub limit: Option<i64>,
+    /// Edit distance for fuzzy matching (0-2, default 1)
+    #[serde(default)]
+    pub fuzzy_distance: Option<u8>,
+    /// Enable fuzzy matching (default true)
+    #[serde(default)]
+    pub fuzzy_enabled: Option<bool>,
+    /// For workspace crates: member path
+    #[serde(default)]
+    pub member: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct ListCrateVersionsInput {
+    /// Name of the crate on crates.io
+    pub crate_name: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct RemoveCrateInput {
+    /// Name of the cached crate to remove
+    pub crate_name: String,
+    /// Version to remove
+    pub version: String,
 }
 
 // ── Shared result type ────────────────────────────────────────────────────────
@@ -317,13 +409,19 @@ impl DocServer {
                     "version": input.version,
                 }),
             ),
-            _ => (
-                "cache_crate_from_cratesio",
-                serde_json::json!({
+            _ => {
+                let mut args = serde_json::json!({
                     "crate_name": input.crate_name,
                     "version": input.version,
-                }),
-            ),
+                });
+                if let Some(features) = &input.features {
+                    args["features"] = serde_json::json!(features);
+                }
+                if let Some(no_default) = input.no_default_features {
+                    args["no_default_features"] = serde_json::json!(no_default);
+                }
+                ("cache_crate_from_cratesio", args)
+            }
         };
         let text = tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(proxy.call_tool(tool_name, args))
@@ -413,12 +511,94 @@ impl DocServer {
         });
         Json(DocResult { text })
     }
+
+    #[tool(
+        name = "list_crate_items",
+        description = "List all items (functions, structs, traits, etc.) in a cached Rust crate. Supports pagination and kind filtering."
+    )]
+    fn list_crate_items(&self, Parameters(input): Parameters<ListCrateItemsInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("list_crate_items", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "get_item_docs",
+        description = "Get the documentation string for a specific item in a cached crate (lighter than get_item_details)."
+    )]
+    fn get_item_docs(&self, Parameters(input): Parameters<GetItemInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("get_item_docs", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "search_crate_items_fuzzy",
+        description = "Fuzzy search for items in a cached Rust crate. Tolerates typos (configurable edit distance)."
+    )]
+    fn search_crate_items_fuzzy(&self, Parameters(input): Parameters<SearchItemsFuzzyInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("search_items_fuzzy", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "list_crate_versions",
+        description = "List available versions of a crate on crates.io."
+    )]
+    fn list_crate_versions(&self, Parameters(input): Parameters<ListCrateVersionsInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("list_crate_versions", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "remove_crate",
+        description = "Remove a cached Rust crate from local storage to free up space."
+    )]
+    fn remove_crate(&self, Parameters(input): Parameters<RemoveCrateInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("remove_crate", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
 }
 
 impl ServerHandler for DocServer {
     fn get_info(&self) -> ServerInfo {
         let proxy_status = if self.crate_proxy.is_some() {
-            "Crate tools available (rust-docs-mcp): cache_crate, list_cached_crates, search_crate_items, get_item_details, get_item_source, get_crate_dependencies."
+            "Crate tools (rust-docs-mcp): cache_crate, list_cached_crates, list_crate_versions, \
+             search_crate_items, search_crate_items_fuzzy, list_crate_items, \
+             get_item_details, get_item_docs, get_item_source, get_crate_dependencies, remove_crate."
         } else {
             "Crate tools unavailable (rust-docs-mcp not found)."
         };

@@ -182,16 +182,25 @@ cache_crate({ crate_name: "axum", source_type: "cratesio", version: "0.8.8" })
 
 | Tool | Description |
 |------|-------------|
-| `cache_crate` | Download & cache a crate (cratesio / github / local) |
+| `cache_crate` | Download & cache a crate (cratesio / github / local). Params: `members` (workspaces), `update` (force re-cache) |
 | `list_cached_crates` | List cached crates with sizes |
-| `search_crate_items` | Search items by pattern (requires `crate_name`, `version`, `pattern`) |
-| `get_item_details` | Full signature + docs for an item (item_id is an integer) |
+| `list_crate_versions` | List available versions on crates.io |
+| `search_crate_items` | Search items by pattern (`crate_name`, `version`, `pattern`). Optional: `kind_filter`, `limit`, `offset`, `path_filter`, `member` |
+| `search_crate_items_fuzzy` | Fuzzy search tolerating typos (`query`, `fuzzy_distance` 0-2) |
+| `list_crate_items` | List all items in a crate (with pagination and `kind_filter`) |
+| `get_item_details` | Full signature + docs for an item (item_id is an i32 integer) |
+| `get_item_docs` | Documentation only for an item (lighter than `get_item_details`) |
 | `get_item_source` | Source code of an item |
 | `get_crate_dependencies` | Dependency tree |
+| `remove_crate` | Remove a cached crate to free space |
 
 **Cache** is stored in Docker volume `rust_docs_cache` (persistent across restarts).
 
-**Runtime requirement:** nightly Rust toolchain inside the container (pre-installed in image via rustup, `RUST_DOCS_MCP_TOOLCHAIN=nightly`).
+**Runtime requirement:** nightly Rust toolchain (`RUST_DOCS_MCP_TOOLCHAIN=nightly`), packages `build-essential pkg-config libssl-dev libclang-dev`.
+
+**Runtime env vars:** `RUSTFLAGS` and `RUSTDOCFLAGS` include `--cfg tokio_unstable --cfg reqwest_unstable` to support crates with unstable features.
+
+**Known limitation:** chrono cannot be cached — rust-docs-mcp forces `--all-features` internally and rkyv's `size_16/32/64` features are mutually exclusive. Upstream limitation.
 
 ### Adding a new doc source (config-driven)
 

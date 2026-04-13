@@ -50,13 +50,15 @@ RUN node fetch-docs.mjs
 # ── Stage 4 : Runtime (nightly required for rustdoc JSON generation) ──────────
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates wget git curl build-essential \
+RUN apt-get update && apt-get install -y ca-certificates wget git curl build-essential pkg-config libssl-dev libclang-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install rustup + nightly at runtime (needed by rust-docs-mcp to run rustdoc)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --default-toolchain nightly --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
+# Install the specific nightly version required by rust-docs-mcp
+RUN rustup toolchain install nightly-2025-06-23 --profile minimal
 
 COPY --from=rust-builder  /app/target/x86_64-unknown-linux-musl/release/mcp-rust-docs  /usr/local/bin/
 COPY --from=rdmcp-builder /root/.cargo/bin/rust-docs-mcp           /usr/local/bin/
@@ -66,5 +68,9 @@ EXPOSE 80
 ENV DOCS_PATH=/docs
 ENV RUST_DOCS_MCP_CACHE_DIR=/cache
 ENV RUST_DOCS_MCP_TOOLCHAIN=nightly
+# cfg flags pour les crates avec features unstable
+# tokio (io-uring, taskdump) et reqwest (http3) nécessitent ces flags à la compilation
+ENV RUSTFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"
+ENV RUSTDOCFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"
 
 CMD ["mcp-rust-docs"]

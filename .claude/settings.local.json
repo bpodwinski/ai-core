@@ -77,7 +77,14 @@
       "Bash(cmd //c \"mklink /J .claude\\\\skills E:\\\\Dev\\\\ai-core\\\\skills\")",
       "Bash(ls -la .agents/skills/)",
       "Bash(ls -la .agents/)",
-      "Bash(awk '{print $1, $NF}')"
+      "Bash(awk '{print $1, $NF}')",
+      "Bash(just ship:*)",
+      "Bash(just logs:*)",
+      "Bash(ssh -p 22 -i \"C:/Users/Admin/.ssh/mcp_deploy\" \"dockerproxy@marduk.benoitpodwinski.com\" \"cd /home/dockerproxy/web/mcp.benoitpodwinski.com/public_html && docker compose logs mcp-docs 2>&1 | grep 'tool .* — required'\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('hooks', {}\\), indent=2\\)\\)\")",
+      "Bash(git -C /e/Dev/ai-core diff --stat)",
+      "Bash(git -C /e/Dev/ai-core add AGENTS.md CLAUDE.md mcp/AGENTS.md mcp/CLAUDE.md mcp/servers/rust-docs/Dockerfile mcp/servers/rust-docs/src/tools.rs .claude/settings.local.json)",
+      "Bash(git -C /e/Dev/ai-core commit -m ':*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
@@ -93,7 +100,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/sync-skill.py"
+            "command": "python \"E:\\Dev\\ai-core\\.claude\\hooks\\sync-skill.py\""
           }
         ]
       }
