@@ -20,8 +20,16 @@ impl CrateProxy {
             .stderr(std::process::Stdio::inherit())
             .spawn()?;
 
-        let stdin = child.stdin.take().ok_or_else(|| anyhow::anyhow!("no stdin"))?;
-        let stdout = BufReader::new(child.stdout.take().ok_or_else(|| anyhow::anyhow!("no stdout"))?);
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow::anyhow!("no stdin"))?;
+        let stdout = BufReader::new(
+            child
+                .stdout
+                .take()
+                .ok_or_else(|| anyhow::anyhow!("no stdout"))?,
+        );
 
         // Let the subprocess run as a daemon — we hold its stdin/stdout handles.
         tokio::spawn(async move {
