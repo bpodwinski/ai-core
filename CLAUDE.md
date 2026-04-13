@@ -64,18 +64,20 @@ The API layer (`api.py`) invokes scripts via `subprocess.run`, passing parameter
 
 ## Skills (Claude Code + Codex CLI)
 
-Les skills réutilisables sont stockés en double dans deux répertoires, un par outil :
+Les skills réutilisables sont dans `skills/` à la racine du projet (source unique).
 
-| Outil | Répertoire |
-|-------|-----------|
-| Claude Code | `.claude/skills/<name>/SKILL.md` |
-| Codex CLI | `.agents/skills/<name>/SKILL.md` |
+Claude Code les découvre via une junction `.claude/skills/` → `skills/`.
+Codex CLI peut être configuré pour pointer vers `skills/` directement.
 
-Le format `SKILL.md` est identique car les deux outils implémentent la norme ouverte [Agent Skills](https://agentskills.io). Les champs frontmatter spécifiques à Claude Code (`allowed-tools`, `argument-hint`, `context`, etc.) sont ignorés par Codex CLI.
+Le format `SKILL.md` suit la norme ouverte [Agent Skills](https://agentskills.io).
 
-Claude Code ne scanne pas `.agents/skills/` — les deux répertoires sont obligatoires.
-
-**Convention** : quand tu crées ou modifies un skill, mets à jour les deux répertoires en parallèle. La source de vérité est `.claude/skills/` — recopie ensuite dans `.agents/skills/`.
+**Setup après clone** (une seule fois) :
+```bash
+# Windows (junction)
+mklink /J .claude\skills E:\Dev\ai-core\skills
+# Linux/macOS (symlink)
+ln -s ../../skills .claude/skills
+```
 
 ### Skills disponibles
 

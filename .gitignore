@@ -18,3 +18,7 @@ qdrant_data/
 
 # Generated configs (publiés via GitHub Releases)
 dist/
+
+# Junction/symlink — source is skills/ at project root
+.claude/skills
+.agents/skills
