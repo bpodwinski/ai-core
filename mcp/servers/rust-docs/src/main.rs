@@ -1,7 +1,6 @@
 use rmcp::handler::server::router::Router;
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService,
-    session::local::LocalSessionManager,
+    session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
 };
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
@@ -62,17 +61,20 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let router = axum::Router::new()
-        .route("/health", axum::routing::get(move || {
-            let cats = health_cats.clone();
-            async move {
-                axum::Json(serde_json::json!({
-                    "status": "ok",
-                    "docs_loaded": doc_count,
-                    "categories": *cats,
-                    "crate_tools": proxy_available,
-                }))
-            }
-        }))
+        .route(
+            "/health",
+            axum::routing::get(move || {
+                let cats = health_cats.clone();
+                async move {
+                    axum::Json(serde_json::json!({
+                        "status": "ok",
+                        "docs_loaded": doc_count,
+                        "categories": *cats,
+                        "crate_tools": proxy_available,
+                    }))
+                }
+            }),
+        )
         .fallback_service(service);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await?;

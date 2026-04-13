@@ -2,7 +2,7 @@ use crate::crate_proxy::CrateProxy;
 use rmcp::handler::server::wrapper::{Json, Parameters};
 use rmcp::model::{ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
-use rmcp::{ServerHandler, tool, tool_router};
+use rmcp::{tool, tool_router, ServerHandler};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -232,7 +232,11 @@ pub fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
         return docs;
     }
     load_recursive(base, base, &mut docs);
-    tracing::info!("Loaded {} documentation pages from {}", docs.len(), base.display());
+    tracing::info!(
+        "Loaded {} documentation pages from {}",
+        docs.len(),
+        base.display()
+    );
     docs
 }
 
@@ -267,7 +271,11 @@ fn load_recursive(base: &Path, current: &Path, docs: &mut Vec<DocEntry>) {
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
             if let Ok(content) = std::fs::read_to_string(&path) {
-                docs.push(DocEntry { category, topic, content });
+                docs.push(DocEntry {
+                    category,
+                    topic,
+                    content,
+                });
             }
         }
     }
@@ -281,7 +289,11 @@ impl DocServer {
         categories: Vec<String>,
         crate_proxy: Option<Arc<CrateProxy>>,
     ) -> Self {
-        Self { docs, categories, crate_proxy }
+        Self {
+            docs,
+            categories,
+            crate_proxy,
+        }
     }
 
     fn full_path(doc: &DocEntry) -> String {
@@ -303,10 +315,15 @@ impl DocServer {
 impl DocServer {
     // ── Static docs tools ─────────────────────────────────────────────────────
 
-    #[tool(name = "search_docs", description = "Search documentation across all loaded docs. Returns matching sections. Use the optional 'category' parameter to filter by doc source (e.g. 'leptos', 'rust', 'daisyui').")]
+    #[tool(
+        name = "search_docs",
+        description = "Search documentation across all loaded docs. Returns matching sections. Use the optional 'category' parameter to filter by doc source (e.g. 'leptos', 'rust', 'daisyui')."
+    )]
     fn search_docs(&self, Parameters(input): Parameters<SearchInput>) -> Json<DocResult> {
         if input.query.len() > 500 {
-            return Json(DocResult { text: "Query too long (max 500 characters).".into() });
+            return Json(DocResult {
+                text: "Query too long (max 500 characters).".into(),
+            });
         }
         let query = input.query.to_lowercase();
         let results: Vec<_> = self
@@ -330,15 +347,24 @@ impl DocServer {
         let text = if results.is_empty() {
             "No documentation found matching your query.".into()
         } else {
-            format!("{} result(s):\n\n{}", results.len(), results.join("\n\n---\n\n"))
+            format!(
+                "{} result(s):\n\n{}",
+                results.len(),
+                results.join("\n\n---\n\n")
+            )
         };
         Json(DocResult { text })
     }
 
-    #[tool(name = "get_doc", description = "Get a specific documentation page by its full path (category/topic). Use list_topics to discover available paths.")]
+    #[tool(
+        name = "get_doc",
+        description = "Get a specific documentation page by its full path (category/topic). Use list_topics to discover available paths."
+    )]
     fn get_doc(&self, Parameters(input): Parameters<GetDocInput>) -> Json<DocResult> {
         if input.path.contains("..") || input.path.starts_with('/') {
-            return Json(DocResult { text: "Invalid path.".into() });
+            return Json(DocResult {
+                text: "Invalid path.".into(),
+            });
         }
         let path = input.path.to_lowercase();
         let text = self
@@ -355,7 +381,10 @@ impl DocServer {
         Json(DocResult { text })
     }
 
-    #[tool(name = "list_topics", description = "List available documentation topics, optionally filtered by category prefix.")]
+    #[tool(
+        name = "list_topics",
+        description = "List available documentation topics, optionally filtered by category prefix."
+    )]
     fn list_topics(&self, Parameters(input): Parameters<ListTopicsInput>) -> Json<DocResult> {
         let topics: Vec<_> = self
             .docs
@@ -377,7 +406,11 @@ impl DocServer {
         let text = if topics.is_empty() {
             "No documentation available.".into()
         } else {
-            format!("Available documentation ({} topics):\n{}", topics.len(), topics.join("\n"))
+            format!(
+                "Available documentation ({} topics):\n{}",
+                topics.len(),
+                topics.join("\n")
+            )
         };
         Json(DocResult { text })
     }
@@ -423,7 +456,10 @@ impl DocServer {
         Json(DocResult { text })
     }
 
-    #[tool(name = "list_cached_crates", description = "List all locally cached Rust crates with their versions and sizes.")]
+    #[tool(
+        name = "list_cached_crates",
+        description = "List all locally cached Rust crates with their versions and sizes."
+    )]
     fn list_cached_crates(&self, _: Parameters<ListCachedCratesInput>) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
@@ -439,11 +475,18 @@ impl DocServer {
         name = "search_crate_items",
         description = "Search items (functions, structs, traits, etc.) in a cached Rust crate. Returns matching API items with documentation."
     )]
-    fn search_crate_items(&self, Parameters(input): Parameters<SearchCrateItemsInput>) -> Json<DocResult> {
+    fn search_crate_items(
+        &self,
+        Parameters(input): Parameters<SearchCrateItemsInput>,
+    ) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
-        let tool = if input.preview.unwrap_or(false) { "search_items_preview" } else { "search_items" };
+        let tool = if input.preview.unwrap_or(false) {
+            "search_items_preview"
+        } else {
+            "search_items"
+        };
         let mut args = serde_json::json!({
             "crate_name": input.crate_name,
             "version": input.version,
@@ -467,9 +510,10 @@ impl DocServer {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("get_item_details", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "get_item_details",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -478,14 +522,18 @@ impl DocServer {
         name = "get_item_source",
         description = "View the source code of a specific item in a cached crate, with configurable surrounding context lines."
     )]
-    fn get_item_source(&self, Parameters(input): Parameters<GetItemSourceInput>) -> Json<DocResult> {
+    fn get_item_source(
+        &self,
+        Parameters(input): Parameters<GetItemSourceInput>,
+    ) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("get_item_source", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "get_item_source",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -494,14 +542,18 @@ impl DocServer {
         name = "get_crate_dependencies",
         description = "Analyze the direct and transitive dependencies of a cached Rust crate."
     )]
-    fn get_crate_dependencies(&self, Parameters(input): Parameters<CrateNameInput>) -> Json<DocResult> {
+    fn get_crate_dependencies(
+        &self,
+        Parameters(input): Parameters<CrateNameInput>,
+    ) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("get_dependencies", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "get_dependencies",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -510,14 +562,18 @@ impl DocServer {
         name = "list_crate_items",
         description = "List all items (functions, structs, traits, etc.) in a cached Rust crate. Supports pagination and kind filtering."
     )]
-    fn list_crate_items(&self, Parameters(input): Parameters<ListCrateItemsInput>) -> Json<DocResult> {
+    fn list_crate_items(
+        &self,
+        Parameters(input): Parameters<ListCrateItemsInput>,
+    ) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("list_crate_items", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "list_crate_items",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -531,9 +587,10 @@ impl DocServer {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("get_item_docs", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "get_item_docs",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -542,14 +599,18 @@ impl DocServer {
         name = "search_crate_items_fuzzy",
         description = "Fuzzy search for items in a cached Rust crate. Tolerates typos (configurable edit distance)."
     )]
-    fn search_crate_items_fuzzy(&self, Parameters(input): Parameters<SearchItemsFuzzyInput>) -> Json<DocResult> {
+    fn search_crate_items_fuzzy(
+        &self,
+        Parameters(input): Parameters<SearchItemsFuzzyInput>,
+    ) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("search_items_fuzzy", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "search_items_fuzzy",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -558,14 +619,18 @@ impl DocServer {
         name = "list_crate_versions",
         description = "List available versions of a crate on crates.io."
     )]
-    fn list_crate_versions(&self, Parameters(input): Parameters<ListCrateVersionsInput>) -> Json<DocResult> {
+    fn list_crate_versions(
+        &self,
+        Parameters(input): Parameters<ListCrateVersionsInput>,
+    ) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("list_crate_versions", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "list_crate_versions",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
@@ -579,9 +644,10 @@ impl DocServer {
             return Self::proxy_unavailable();
         };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                proxy.call_tool("remove_crate", serde_json::to_value(input).unwrap_or_default()),
-            )
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(
+                "remove_crate",
+                serde_json::to_value(input).unwrap_or_default(),
+            ))
         });
         Json(DocResult { text })
     }
