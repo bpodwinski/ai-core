@@ -60,7 +60,11 @@
       "Bash(echo '{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"e:\\\\\\\\Dev\\\\\\\\ai-core\\\\\\\\.claude\\\\\\\\skills\\\\\\\\rust-unit-tests\\\\\\\\SKILL.md\",\"content\":\"test\"}}')",
       "Bash(python \"e:\\\\Dev\\\\ai-core\\\\.claude\\\\hooks\\\\sync-skill.py\")",
       "Bash(printf '{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"e:\\\\\\\\\\\\\\\\Dev\\\\\\\\\\\\\\\\ai-core\\\\\\\\\\\\\\\\.claude\\\\\\\\\\\\\\\\skills\\\\\\\\\\\\\\\\rust-unit-tests\\\\\\\\\\\\\\\\SKILL.md\",\"content\":\"test\"}}')",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "mcp__daisyui__list_topics",
+      "WebFetch(domain:daisyui.com)",
+      "mcp__daisyui__get_doc",
+      "mcp__daisyui__search_docs"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
