@@ -21,7 +21,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --default-toolchain nightly --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN cargo install rust-docs-mcp
+# Fork with --features support for crates with mutually exclusive features
+# See: E:\Dev\rust-docs-mcp (local fork of snowmead/rust-docs-mcp)
+RUN cargo install --git https://github.com/AiMusic69/rust-docs-mcp.git rust-docs-mcp
 
 # ── Stage 3 : Fetch & process docs (config-driven from manifest) ──────────────
 FROM node:20-slim AS docs-builder
@@ -50,7 +52,7 @@ RUN node fetch-docs.mjs
 # ── Stage 4 : Runtime (nightly required for rustdoc JSON generation) ──────────
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates wget git curl build-essential pkg-config libssl-dev libclang-dev \
+RUN apt-get update && apt-get install -y ca-certificates wget git curl build-essential pkg-config libssl-dev libclang-dev python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install rustup + nightly at runtime (needed by rust-docs-mcp to run rustdoc)

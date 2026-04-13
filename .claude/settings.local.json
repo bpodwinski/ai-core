@@ -84,13 +84,18 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('hooks', {}\\), indent=2\\)\\)\")",
       "Bash(git -C /e/Dev/ai-core diff --stat)",
       "Bash(git -C /e/Dev/ai-core add AGENTS.md CLAUDE.md mcp/AGENTS.md mcp/CLAUDE.md mcp/servers/rust-docs/Dockerfile mcp/servers/rust-docs/src/tools.rs .claude/settings.local.json)",
-      "Bash(git -C /e/Dev/ai-core commit -m ':*)"
+      "Bash(git -C /e/Dev/ai-core commit -m ':*)",
+      "Bash(git -C /e/Dev/ai-core add mcp/servers/rust-docs/Dockerfile)",
+      "Bash(git -C /e/Dev/ai-core add mcp/servers/rust-docs/src/tools.rs)",
+      "Read(//e/Dev/rust-docs-mcp/rust-docs-mcp/src//**)",
+      "Read(//e/Dev/rust-docs-mcp/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
       "e:\\Dev\\ai-core\\skills",
       "\\tmp",
-      "E:\\Dev\\ai-core"
+      "E:\\Dev\\ai-core",
+      "E:\\Dev\\rust-docs-mcp\\rust-docs-mcp\\src"
     ]
   },
   "hooks": {

@@ -8,84 +8,6 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::Arc;
 
-/// Workaround for crates whose --all-features triggers mutually-exclusive feature errors
-/// (e.g. chrono + rkyv 0.7 size_16/32/64).
-///
-/// Steps:
-///   1. Download the tarball from static.crates.io
-///   2. Extract to a temp dir
-///   3. Patch Cargo.toml — remove any line starting with "rkyv" (feature defs + dep entries)
-///   4. Call cache_crate_from_local so rust-docs-mcp uses the patched source
-///   5. Clean up the temp dir
-async fn patch_and_cache_local(
-    proxy: Arc<CrateProxy>,
-    crate_name: &str,
-    version: &str,
-    members: Option<Vec<String>>,
-    update: Option<bool>,
-) -> String {
-    // Basic validation to prevent shell injection
-    let name_ok = crate_name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_');
-    let ver_ok  = version.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-' || c == '+');
-    if !name_ok || !ver_ok {
-        return "Invalid crate name or version (must be alphanumeric / - _ . +)".to_string();
-    }
-
-    let tmp     = format!("/tmp/crate-nodft-{}-{}", crate_name, version);
-    let url     = format!("https://static.crates.io/crates/{name}/{name}-{version}.crate",
-                          name = crate_name, version = version);
-    let src_dir = format!("{}/{}-{}", tmp, crate_name, version);
-
-    // Download, extract, and patch in one shell script
-    let script = format!(
-        r#"set -e
-rm -rf '{tmp}'
-mkdir -p '{tmp}'
-curl -fsSL '{url}' | tar -xz -C '{tmp}'
-TOML='{src_dir}/Cargo.toml'
-# Remove any line starting with "rkyv" (covers feature defs AND inline dep entries)
-sed -i '/^rkyv/d' "$TOML"
-"#,
-        tmp = tmp,
-        url = url,
-        src_dir = src_dir,
-    );
-
-    let out = tokio::process::Command::new("sh")
-        .arg("-c")
-        .arg(&script)
-        .output()
-        .await;
-
-    match out {
-        Err(e) => return format!("patch_and_cache_local: spawn failed: {e}"),
-        Ok(o) if !o.status.success() => {
-            let stderr = String::from_utf8_lossy(&o.stderr);
-            return format!("patch_and_cache_local: script failed:\n{stderr}");
-        }
-        _ => {}
-    }
-
-    let mut args = serde_json::json!({
-        "crate_name": crate_name,
-        "path":       src_dir,
-        "version":    version,
-    });
-    if let Some(m) = members { args["members"] = serde_json::json!(m); }
-    if let Some(u) = update  { args["update"]  = serde_json::json!(u); }
-
-    let result = proxy.call_tool("cache_crate_from_local", args).await;
-
-    // Best-effort cleanup
-    let _ = tokio::process::Command::new("sh")
-        .arg("-c")
-        .arg(format!("rm -rf '{}'", tmp))
-        .output()
-        .await;
-
-    result
-}
-
 #[derive(Clone)]
 pub(crate) struct DocEntry {
     category: String,
@@ -156,10 +78,13 @@ pub struct CacheCrateInput {
     /// Force re-download even if already cached
     #[serde(default)]
     pub update: Option<bool>,
-    /// List of features to enable — NOTE: not supported by cache tools, ignored
+    /// Specific features to enable instead of --all-features.
+    /// Use for crates with mutually exclusive features (e.g. leptos-use: features: ["axum"]).
+    /// When provided, uses --no-default-features --features=a,b,c.
     #[serde(default)]
     pub features: Option<Vec<String>>,
-    /// Disable default features — NOTE: not supported by cache tools, ignored
+    /// Disable default features — LEGACY: prefer using features: [] instead.
+    /// When true without features, defaults to features=[] (no-default-features).
     #[serde(default)]
     pub no_default_features: Option<bool>,
 }
@@ -463,65 +388,37 @@ impl DocServer {
 
     #[tool(
         name = "cache_crate",
-        description = "Download and cache a Rust crate for local analysis. Use source_type 'cratesio' with a version, 'github' with github_url and branch/tag, or 'local' with a path."
+        description = "Download and cache a Rust crate for local analysis. Use source_type 'cratesio' with a version, 'github' with github_url and branch/tag, or 'local' with a path. Use 'features' for crates with mutually exclusive features (e.g. features: ['axum'] for leptos-use)."
     )]
     fn cache_crate(&self, Parameters(input): Parameters<CacheCrateInput>) -> Json<DocResult> {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
 
-        // Special path: cratesio + no_default_features=true
-        // rust-docs-mcp always uses --all-features internally and has no way to disable it.
-        // Workaround: download the tarball, remove problematic feature entries from Cargo.toml,
-        // then cache via cache_crate_from_local so --all-features becomes harmless.
-        if input.source_type != "github" && input.source_type != "local"
-            && input.no_default_features == Some(true)
-        {
-            let version  = input.version.clone().unwrap_or_default();
-            let name     = input.crate_name.clone();
-            let members  = input.members.clone();
-            let update   = input.update;
-            let text = tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current()
-                    .block_on(patch_and_cache_local(proxy, &name, &version, members, update))
-            });
-            return Json(DocResult { text });
-        }
-
-        let (tool_name, args) = match input.source_type.as_str() {
-            "github" => (
-                "cache_crate_from_github",
-                serde_json::json!({
-                    "crate_name": input.crate_name,
-                    "github_url": input.github_url,
-                    "branch":     input.branch,
-                    "tag":        input.tag,
-                    "members":    input.members,
-                    "update":     input.update,
-                }),
-            ),
-            "local" => (
-                "cache_crate_from_local",
-                serde_json::json!({
-                    "crate_name": input.crate_name,
-                    "path":       input.path,
-                    "version":    input.version,
-                    "members":    input.members,
-                    "update":     input.update,
-                }),
-            ),
-            _ => (
-                "cache_crate_from_cratesio",
-                serde_json::json!({
-                    "crate_name": input.crate_name,
-                    "version":    input.version,
-                    "members":    input.members,
-                    "update":     input.update,
-                }),
-            ),
+        // Resolve features: explicit features take priority, no_default_features=true
+        // is treated as features=[] for backward compatibility.
+        let features = if input.features.is_some() {
+            input.features.clone()
+        } else if input.no_default_features == Some(true) {
+            Some(vec![])
+        } else {
+            None
         };
+
+        let args = serde_json::json!({
+            "crate_name":  input.crate_name,
+            "source_type": input.source_type,
+            "version":     input.version,
+            "github_url":  input.github_url,
+            "branch":      input.branch,
+            "tag":         input.tag,
+            "path":        input.path,
+            "members":     input.members,
+            "update":      input.update,
+            "features":    features,
+        });
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(tool_name, args))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("cache_crate", args))
         });
         Json(DocResult { text })
     }
