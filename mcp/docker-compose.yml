@@ -64,6 +64,7 @@ services:
     environment:
       DOCS_PATH: /docs
       RUST_DOCS_MCP_CACHE_DIR: /cache
+      RUST_LOG: info
     volumes:
       - rust_docs_cache:/cache
     healthcheck:

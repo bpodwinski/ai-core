@@ -22,8 +22,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Fork with --features support for crates with mutually exclusive features
-# See: E:\Dev\rust-docs-mcp (local fork of snowmead/rust-docs-mcp)
-RUN cargo install --git https://github.com/AiMusic69/rust-docs-mcp.git rust-docs-mcp
+# See: D:\Dev\rust-docs-mcp (local fork of snowmead/rust-docs-mcp)
+RUN cargo install --git https://github.com/bpodwinski/rust-docs-mcp.git rust-docs-mcp
 
 # ── Stage 3 : Fetch & process docs (config-driven from manifest) ──────────────
 FROM node:20-slim AS docs-builder
@@ -59,8 +59,8 @@ RUN apt-get update && apt-get install -y ca-certificates wget git curl build-ess
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --default-toolchain nightly --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
-# Install the specific nightly version required by rust-docs-mcp
-RUN rustup toolchain install nightly-2025-06-23 --profile minimal
+# Install the specific nightly version required by rust-docs-mcp (rustdoc-types 0.53 = format v53)
+RUN rustup toolchain install nightly-2025-06-24 --profile minimal
 
 COPY --from=rust-builder  /app/target/x86_64-unknown-linux-musl/release/mcp-rust-docs  /usr/local/bin/
 COPY --from=rdmcp-builder /root/.cargo/bin/rust-docs-mcp           /usr/local/bin/
@@ -69,10 +69,10 @@ COPY --from=docs-builder  /docs/                                    /docs/
 EXPOSE 80
 ENV DOCS_PATH=/docs
 ENV RUST_DOCS_MCP_CACHE_DIR=/cache
-ENV RUST_DOCS_MCP_TOOLCHAIN=nightly
+ENV RUST_DOCS_MCP_TOOLCHAIN=nightly-2025-06-24
 # Force nightly for all cargo invocations — overrides any project rust-toolchain.toml
 # (e.g. sqlx pins 1.78 which can't handle edition2024 deps like time-0.3.47)
-ENV RUSTUP_TOOLCHAIN=nightly
+ENV RUSTUP_TOOLCHAIN=nightly-2025-06-24
 # cfg flags pour les crates avec features unstable
 # tokio (io-uring, taskdump) et reqwest (http3) nécessitent ces flags à la compilation
 ENV RUSTFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"

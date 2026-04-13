@@ -92,10 +92,10 @@
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
-      "e:\\Dev\\ai-core\\skills",
+      "D:\\Dev\\ai-core\\skills",
       "\\tmp",
-      "E:\\Dev\\ai-core",
-      "E:\\Dev\\rust-docs-mcp\\rust-docs-mcp\\src"
+      "D:\\Dev\\ai-core",
+      "D:\\Dev\\rust-docs-mcp\\rust-docs-mcp\\src"
     ]
   },
   "hooks": {
@@ -105,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"E:\\Dev\\ai-core\\.claude\\hooks\\sync-skill.py\""
+            "command": "python \"D:\\Dev\\ai-core\\.claude\\hooks\\sync-skill.py\""
           }
         ]
       }
