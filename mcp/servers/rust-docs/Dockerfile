@@ -68,6 +68,9 @@ EXPOSE 80
 ENV DOCS_PATH=/docs
 ENV RUST_DOCS_MCP_CACHE_DIR=/cache
 ENV RUST_DOCS_MCP_TOOLCHAIN=nightly
+# Force nightly for all cargo invocations — overrides any project rust-toolchain.toml
+# (e.g. sqlx pins 1.78 which can't handle edition2024 deps like time-0.3.47)
+ENV RUSTUP_TOOLCHAIN=nightly
 # cfg flags pour les crates avec features unstable
 # tokio (io-uring, taskdump) et reqwest (http3) nécessitent ces flags à la compilation
 ENV RUSTFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"
