@@ -76,7 +76,8 @@
       "Bash(rmdir .claude/skills)",
       "Bash(cmd //c \"mklink /J .claude\\\\skills E:\\\\Dev\\\\ai-core\\\\skills\")",
       "Bash(ls -la .agents/skills/)",
-      "Bash(ls -la .agents/)"
+      "Bash(ls -la .agents/)",
+      "Bash(awk '{print $1, $NF}')"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",

@@ -51,6 +51,7 @@ services:
       start_period: 10s
 
   # Single multi-tenant docs server — serves all doc sources via DOCS_PATH=/docs
+  # Also embeds rust-docs-mcp as a subprocess for on-demand crate analysis
   mcp-docs:
     build:
       context: .
@@ -62,9 +63,15 @@ services:
       - "80"
     environment:
       DOCS_PATH: /docs
+      RUST_DOCS_MCP_CACHE_DIR: /cache
+    volumes:
+      - rust_docs_cache:/cache
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+volumes:
+  rust_docs_cache:

@@ -1,3 +1,4 @@
+use crate::crate_proxy::CrateProxy;
 use rmcp::handler::server::wrapper::{Json, Parameters};
 use rmcp::model::{ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
@@ -18,9 +19,10 @@ pub(crate) struct DocEntry {
 pub struct DocServer {
     docs: Arc<Vec<DocEntry>>,
     categories: Vec<String>,
+    crate_proxy: Option<Arc<CrateProxy>>,
 }
 
-// --- Tool input/output types ---
+// ── Static docs tool inputs ───────────────────────────────────────────────────
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct SearchInput {
@@ -44,12 +46,89 @@ pub struct ListTopicsInput {
     pub category: Option<String>,
 }
 
+// ── Crate tool inputs ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
+pub struct ListCachedCratesInput {}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct CacheCrateInput {
+    /// Name of the crate (e.g. "axum", "serde")
+    pub crate_name: String,
+    /// Source type: "cratesio", "github", or "local"
+    pub source_type: String,
+    /// Version string for cratesio (e.g. "0.8.4")
+    #[serde(default)]
+    pub version: Option<String>,
+    /// GitHub URL for source_type "github" (e.g. "https://github.com/tokio-rs/axum")
+    #[serde(default)]
+    pub github_url: Option<String>,
+    /// Branch name for source_type "github"
+    #[serde(default)]
+    pub branch: Option<String>,
+    /// Tag name for source_type "github"
+    #[serde(default)]
+    pub tag: Option<String>,
+    /// Filesystem path for source_type "local"
+    #[serde(default)]
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
+pub struct CrateNameInput {
+    /// Name of the cached crate
+    pub crate_name: String,
+    /// Version of the cached crate (e.g. "0.8.8")
+    pub version: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct SearchCrateItemsInput {
+    /// Name of the cached crate (e.g. "axum")
+    pub crate_name: String,
+    /// Version of the cached crate (e.g. "0.8.8")
+    pub version: String,
+    /// Pattern to search for in item names (e.g. "Router", "extract")
+    pub pattern: String,
+    /// Filter by item kind: "function", "struct", "trait", "enum", "type", "macro", "mod" (optional)
+    #[serde(default)]
+    pub kind_filter: Option<String>,
+    /// Return only item IDs, names, and types (lighter response)
+    #[serde(default)]
+    pub preview: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct GetItemInput {
+    /// Name of the cached crate
+    pub crate_name: String,
+    /// Version of the cached crate (e.g. "0.8.8")
+    pub version: String,
+    /// Numeric item ID (from search results)
+    pub item_id: i32,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct GetItemSourceInput {
+    /// Name of the cached crate
+    pub crate_name: String,
+    /// Version of the cached crate (e.g. "0.8.8")
+    pub version: String,
+    /// Numeric item ID (from search results)
+    pub item_id: i32,
+    /// Number of surrounding context lines (default: 3)
+    #[serde(default)]
+    pub context_lines: Option<i64>,
+}
+
+// ── Shared result type ────────────────────────────────────────────────────────
+
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct DocResult {
     pub text: String,
 }
 
-// --- Load docs from filesystem ---
+// ── Filesystem loading ────────────────────────────────────────────────────────
 
 pub fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
     let mut docs = Vec::new();
@@ -93,21 +172,21 @@ fn load_recursive(base: &Path, current: &Path, docs: &mut Vec<DocEntry>) {
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
             if let Ok(content) = std::fs::read_to_string(&path) {
-                docs.push(DocEntry {
-                    category,
-                    topic,
-                    content,
-                });
+                docs.push(DocEntry { category, topic, content });
             }
         }
     }
 }
 
-// --- Server implementation ---
+// ── Server implementation ─────────────────────────────────────────────────────
 
 impl DocServer {
-    pub fn with_docs(docs: Arc<Vec<DocEntry>>, categories: Vec<String>) -> Self {
-        Self { docs, categories }
+    pub fn new(
+        docs: Arc<Vec<DocEntry>>,
+        categories: Vec<String>,
+        crate_proxy: Option<Arc<CrateProxy>>,
+    ) -> Self {
+        Self { docs, categories, crate_proxy }
     }
 
     fn full_path(doc: &DocEntry) -> String {
@@ -117,10 +196,18 @@ impl DocServer {
             format!("{}/{}", doc.category, doc.topic)
         }
     }
+
+    fn proxy_unavailable() -> Json<DocResult> {
+        Json(DocResult {
+            text: "rust-docs-mcp subprocess is not available. Check server logs.".into(),
+        })
+    }
 }
 
 #[tool_router(vis = "pub")]
 impl DocServer {
+    // ── Static docs tools ─────────────────────────────────────────────────────
+
     #[tool(name = "search_docs", description = "Search documentation across all loaded docs. Returns matching sections. Use the optional 'category' parameter to filter by doc source (e.g. 'leptos', 'rust', 'daisyui').")]
     fn search_docs(&self, Parameters(input): Parameters<SearchInput>) -> Json<DocResult> {
         if input.query.len() > 500 {
@@ -195,28 +282,158 @@ impl DocServer {
         let text = if topics.is_empty() {
             "No documentation available.".into()
         } else {
-            format!(
-                "Available documentation ({} topics):\n{}",
-                topics.len(),
-                topics.join("\n")
-            )
+            format!("Available documentation ({} topics):\n{}", topics.len(), topics.join("\n"))
         };
+        Json(DocResult { text })
+    }
+
+    // ── Crate tools (delegated to rust-docs-mcp subprocess) ──────────────────
+    // Use block_in_place to call async proxy methods from sync tool handlers
+    // (rmcp 1.3 tool_router does not support async fn).
+
+    #[tool(
+        name = "cache_crate",
+        description = "Download and cache a Rust crate for local analysis. Use source_type 'cratesio' with a version, 'github' with github_url and branch/tag, or 'local' with a path."
+    )]
+    fn cache_crate(&self, Parameters(input): Parameters<CacheCrateInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let (tool_name, args) = match input.source_type.as_str() {
+            "github" => (
+                "cache_crate_from_github",
+                serde_json::json!({
+                    "crate_name": input.crate_name,
+                    "github_url": input.github_url,
+                    "branch": input.branch,
+                    "tag": input.tag,
+                }),
+            ),
+            "local" => (
+                "cache_crate_from_local",
+                serde_json::json!({
+                    "crate_name": input.crate_name,
+                    "path": input.path,
+                    "version": input.version,
+                }),
+            ),
+            _ => (
+                "cache_crate_from_cratesio",
+                serde_json::json!({
+                    "crate_name": input.crate_name,
+                    "version": input.version,
+                }),
+            ),
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(tool_name, args))
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(name = "list_cached_crates", description = "List all locally cached Rust crates with their versions and sizes.")]
+    fn list_cached_crates(&self, _: Parameters<ListCachedCratesInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(proxy.call_tool("list_cached_crates", serde_json::json!({})))
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "search_crate_items",
+        description = "Search items (functions, structs, traits, etc.) in a cached Rust crate. Returns matching API items with documentation."
+    )]
+    fn search_crate_items(&self, Parameters(input): Parameters<SearchCrateItemsInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let tool = if input.preview.unwrap_or(false) { "search_items_preview" } else { "search_items" };
+        let mut args = serde_json::json!({
+            "crate_name": input.crate_name,
+            "version": input.version,
+            "pattern": input.pattern,
+        });
+        if let Some(kind_filter) = input.kind_filter {
+            args["kind_filter"] = serde_json::Value::String(kind_filter);
+        }
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(proxy.call_tool(tool, args))
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "get_item_details",
+        description = "Get detailed information about a specific item in a cached crate: signature, fields, methods, and documentation."
+    )]
+    fn get_item_details(&self, Parameters(input): Parameters<GetItemInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("get_item_details", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "get_item_source",
+        description = "View the source code of a specific item in a cached crate, with configurable surrounding context lines."
+    )]
+    fn get_item_source(&self, Parameters(input): Parameters<GetItemSourceInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("get_item_source", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
+        Json(DocResult { text })
+    }
+
+    #[tool(
+        name = "get_crate_dependencies",
+        description = "Analyze the direct and transitive dependencies of a cached Rust crate."
+    )]
+    fn get_crate_dependencies(&self, Parameters(input): Parameters<CrateNameInput>) -> Json<DocResult> {
+        let Some(proxy) = self.crate_proxy.clone() else {
+            return Self::proxy_unavailable();
+        };
+        let text = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(
+                proxy.call_tool("get_dependencies", serde_json::to_value(input).unwrap_or_default()),
+            )
+        });
         Json(DocResult { text })
     }
 }
 
 impl ServerHandler for DocServer {
     fn get_info(&self) -> ServerInfo {
+        let proxy_status = if self.crate_proxy.is_some() {
+            "Crate tools available (rust-docs-mcp): cache_crate, list_cached_crates, search_crate_items, get_item_details, get_item_source, get_crate_dependencies."
+        } else {
+            "Crate tools unavailable (rust-docs-mcp not found)."
+        };
         let mut info = ServerInfo::default();
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
         info.instructions = Some(format!(
             "Documentation MCP server serving {} pages across {} categories: {}. \
              Use search_docs to find information (filter by category with the 'category' parameter), \
              get_doc to retrieve a specific page by path, \
-             and list_topics to see available content.",
+             and list_topics to see available content. \
+             {}",
             self.docs.len(),
             self.categories.len(),
-            self.categories.join(", ")
+            self.categories.join(", "),
+            proxy_status,
         ));
         info
     }

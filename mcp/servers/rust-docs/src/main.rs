@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod crate_proxy;
 mod tools;
 use tools::DocServer;
 
@@ -31,17 +32,29 @@ async fn main() -> anyhow::Result<()> {
         categories.join(", ")
     );
 
+    // Try to spawn rust-docs-mcp as a subprocess — degrade gracefully if unavailable
+    let crate_proxy = match crate_proxy::CrateProxy::spawn().await {
+        Ok(p) => {
+            tracing::info!("rust-docs-mcp subprocess ready");
+            Some(p)
+        }
+        Err(e) => {
+            tracing::warn!("rust-docs-mcp unavailable, crate tools disabled: {e}");
+            None
+        }
+    };
+
     let ct = CancellationToken::new();
 
     // Health check captures doc stats
     let doc_count = docs.len();
     let health_cats = Arc::new(categories.clone());
+    let proxy_available = crate_proxy.is_some();
 
     let service = StreamableHttpService::new(
         move || {
-            let server = DocServer::with_docs(docs.clone(), categories.clone());
-            let router = Router::new(server)
-                .with_tools(DocServer::tool_router());
+            let server = DocServer::new(docs.clone(), categories.clone(), crate_proxy.clone());
+            let router = Router::new(server).with_tools(DocServer::tool_router());
             Ok(router)
         },
         LocalSessionManager::default().into(),
@@ -55,7 +68,8 @@ async fn main() -> anyhow::Result<()> {
                 axum::Json(serde_json::json!({
                     "status": "ok",
                     "docs_loaded": doc_count,
-                    "categories": *cats
+                    "categories": *cats,
+                    "crate_tools": proxy_available,
                 }))
             }
         }))
