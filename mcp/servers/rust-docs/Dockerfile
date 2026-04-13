@@ -18,11 +18,13 @@ RUN apt-get update && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 https://github.com/leptos-rs/book /tmp/leptos-book
 RUN git clone --depth 1 https://github.com/synphonyte/leptos-use /tmp/leptos-use
 RUN git clone --depth 1 https://github.com/rust-lang/book /tmp/rust-book
-RUN curl -L https://daisyui.com/llms.txt -o /tmp/daisyui-docs.md
+RUN curl -L https://daisyui.com/llms.txt -o /tmp/daisyui-docs.md && \
+    wc -c /tmp/daisyui-docs.md
 RUN git clone --depth 1 https://github.com/tailwindlabs/tailwindcss.com /tmp/tailwindcss-site
 
 # Installer les dépendances npm (layer séparé pour le cache)
 COPY package.json /tmp/package.json
+COPY split-daisyui.mjs /tmp/split-daisyui.mjs
 RUN cd /tmp && npm install --silent
 
 # Traiter les docs TailwindCSS
@@ -31,6 +33,9 @@ COPY generate-catalog.mjs /tmp/generate-catalog.mjs
 RUN cd /tmp && \
     node strip-mdx.mjs /tmp/tailwindcss-site/src/docs/ && \
     node generate-catalog.mjs /tmp/tailwindcss-site/src/docs/catalog.md
+
+# Découper le llms.txt DaisyUI en un fichier par composant
+RUN node /tmp/split-daisyui.mjs /tmp/daisyui-docs.md /tmp/daisyui-split
 
 # ── Stage 3 : Runtime ─────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
@@ -48,8 +53,8 @@ COPY --from=node-builder /tmp/leptos-use/docs/book/src/    /docs/leptos-use/
 # Docs Rust Book officiel
 COPY --from=node-builder /tmp/rust-book/src/               /docs/rust/
 
-# Docs DaisyUI optimisées pour les assistants IA
-COPY --from=node-builder /tmp/daisyui-docs.md              /docs/daisyui/reference.md
+# Docs DaisyUI : un fichier par composant/section
+COPY --from=node-builder /tmp/daisyui-split/               /docs/daisyui/
 
 # Docs TailwindCSS (MDX → Markdown propre + catalog des classes)
 COPY --from=node-builder /tmp/tailwindcss-site/src/docs/   /docs/tailwindcss/
