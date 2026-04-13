@@ -1,6 +1,8 @@
 {
   "baseUrl": "https://mcp.benoitpodwinski.com",
-  "servers": [
+  "mcpEndpoint": "/mcp",
+  "mcpName": "docs",
+  "docSources": [
     {
       "name": "leptos",
       "description": "Leptos framework — official book (github.com/leptos-rs/book)"

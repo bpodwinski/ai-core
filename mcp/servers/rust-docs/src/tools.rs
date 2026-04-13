@@ -3,10 +3,12 @@ use rmcp::model::{ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
 use rmcp::{ServerHandler, tool, tool_router};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Clone)]
-struct DocEntry {
+pub(crate) struct DocEntry {
     category: String,
     topic: String,
     content: String,
@@ -14,7 +16,8 @@ struct DocEntry {
 
 #[derive(Clone)]
 pub struct DocServer {
-    docs: Vec<DocEntry>,
+    docs: Arc<Vec<DocEntry>>,
+    categories: Vec<String>,
 }
 
 // --- Tool input/output types ---
@@ -48,7 +51,7 @@ pub struct DocResult {
 
 // --- Load docs from filesystem ---
 
-fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
+pub fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
     let mut docs = Vec::new();
     if !base.is_dir() {
         tracing::warn!("Docs directory not found: {}", base.display());
@@ -57,6 +60,17 @@ fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
     load_recursive(base, base, &mut docs);
     tracing::info!("Loaded {} documentation pages from {}", docs.len(), base.display());
     docs
+}
+
+pub fn extract_categories(docs: &[DocEntry]) -> Vec<String> {
+    let mut cats = BTreeSet::new();
+    for doc in docs {
+        let top = doc.category.split('/').next().unwrap_or(&doc.category);
+        if !top.is_empty() {
+            cats.insert(top.to_string());
+        }
+    }
+    cats.into_iter().collect()
 }
 
 fn load_recursive(base: &Path, current: &Path, docs: &mut Vec<DocEntry>) {
@@ -92,10 +106,8 @@ fn load_recursive(base: &Path, current: &Path, docs: &mut Vec<DocEntry>) {
 // --- Server implementation ---
 
 impl DocServer {
-    pub fn new() -> Self {
-        let docs_path = std::env::var("DOCS_PATH").unwrap_or_else(|_| "/docs".into());
-        let docs = load_docs_from_dir(Path::new(&docs_path));
-        Self { docs }
+    pub fn with_docs(docs: Arc<Vec<DocEntry>>, categories: Vec<String>) -> Self {
+        Self { docs, categories }
     }
 
     fn full_path(doc: &DocEntry) -> String {
@@ -109,8 +121,11 @@ impl DocServer {
 
 #[tool_router(vis = "pub")]
 impl DocServer {
-    #[tool(name = "search_docs", description = "Search documentation across all loaded docs. Returns matching sections.")]
+    #[tool(name = "search_docs", description = "Search documentation across all loaded docs. Returns matching sections. Use the optional 'category' parameter to filter by doc source (e.g. 'leptos', 'rust', 'daisyui').")]
     fn search_docs(&self, Parameters(input): Parameters<SearchInput>) -> Json<DocResult> {
+        if input.query.len() > 500 {
+            return Json(DocResult { text: "Query too long (max 500 characters).".into() });
+        }
         let query = input.query.to_lowercase();
         let results: Vec<_> = self
             .docs
@@ -138,8 +153,11 @@ impl DocServer {
         Json(DocResult { text })
     }
 
-    #[tool(name = "get_doc", description = "Get a specific documentation page by its full path (category/topic).")]
+    #[tool(name = "get_doc", description = "Get a specific documentation page by its full path (category/topic). Use list_topics to discover available paths.")]
     fn get_doc(&self, Parameters(input): Parameters<GetDocInput>) -> Json<DocResult> {
+        if input.path.contains("..") || input.path.starts_with('/') {
+            return Json(DocResult { text: "Invalid path.".into() });
+        }
         let path = input.path.to_lowercase();
         let text = self
             .docs
@@ -191,12 +209,15 @@ impl ServerHandler for DocServer {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::default();
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
-        info.instructions = Some(
-            "Documentation MCP server. Serves docs loaded from the DOCS_PATH directory. \
-             Use search_docs to find information, get_doc to retrieve a specific page, \
-             and list_topics to see what's available."
-                .into(),
-        );
+        info.instructions = Some(format!(
+            "Documentation MCP server serving {} pages across {} categories: {}. \
+             Use search_docs to find information (filter by category with the 'category' parameter), \
+             get_doc to retrieve a specific page by path, \
+             and list_topics to see available content.",
+            self.docs.len(),
+            self.categories.len(),
+            self.categories.join(", ")
+        ));
         info
     }
 }

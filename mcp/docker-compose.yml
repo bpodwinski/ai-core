@@ -25,17 +25,7 @@ services:
     depends_on:
       oauth:
         condition: service_healthy
-      mcp-leptos:
-        condition: service_healthy
-      mcp-leptos-use:
-        condition: service_healthy
-      mcp-rust:
-        condition: service_healthy
-      mcp-daisyui:
-        condition: service_healthy
-      mcp-induflow:
-        condition: service_healthy
-      mcp-tailwindcss:
+      mcp-docs:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
@@ -60,94 +50,19 @@ services:
       retries: 3
       start_period: 10s
 
-  # Same image, different DOCS_PATH per service
-  mcp-leptos:
+  # Single multi-tenant docs server — serves all doc sources via DOCS_PATH=/docs
+  mcp-docs:
     build: ./servers/rust-docs/
     image: mcp-rust-docs:local
-    container_name: mcp-leptos
+    container_name: mcp-docs
     restart: unless-stopped
     expose:
       - "80"
     environment:
-      DOCS_PATH: /docs/leptos
+      DOCS_PATH: /docs
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
-
-  mcp-leptos-use:
-    image: mcp-rust-docs:local
-    container_name: mcp-leptos-use
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      DOCS_PATH: /docs/leptos-use
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
-  mcp-rust:
-    image: mcp-rust-docs:local
-    container_name: mcp-rust
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      DOCS_PATH: /docs/rust
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
-  mcp-daisyui:
-    image: mcp-rust-docs:local
-    container_name: mcp-daisyui
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      DOCS_PATH: /docs/daisyui
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
-  mcp-induflow:
-    image: mcp-rust-docs:local
-    container_name: mcp-induflow
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      DOCS_PATH: /docs/induflow
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
-  mcp-tailwindcss:
-    image: mcp-rust-docs:local
-    container_name: mcp-tailwindcss
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      DOCS_PATH: /docs/tailwindcss
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
