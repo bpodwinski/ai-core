@@ -43,16 +43,18 @@ Un seul container `mcp-docs` sert toutes les sources de documentation. Les docs 
 |---------|------|
 | `justfile` | Tâches build/deploy (Just task runner) |
 | `docker-compose.yml` | Orchestration des 4 services |
-| `servers-manifest.json` | Métadonnées des doc sources (utilisé par generate-configs.mjs) |
+| `servers-manifest.json` | Source de vérité : doc sources, types, transforms, configs clients |
 | `generate-configs.mjs` | Génère `dist/claude-mcp.json` et `dist/codex-config.toml` |
 | `deploy.ps1` | Déploiement SSH → serveur distant |
+| `.dockerignore` | Exclut target/, node_modules/, configs du build context |
 | `nginx/mcp.conf.template` | Config nginx : auth, rate-limit, proxy vers mcp-docs |
 | `cloudflared/config.yml` | Tunnel Cloudflare → nginx:80 |
 | `oauth/server.js` | OAuth 2.0 PKCE (RFC 8414/7591/9728), Express.js |
 | `servers/rust-docs/src/main.rs` | Entry point Rust — chargement docs, health check enrichi |
 | `servers/rust-docs/src/tools.rs` | 3 outils MCP : search_docs, get_doc, list_topics |
-| `servers/rust-docs/Dockerfile` | Build multi-stage : Rust + Node + docs |
-| `servers/rust-docs/induflow/` | Docs InduFlow locales (fichiers .md) |
+| `servers/rust-docs/Dockerfile` | Build multi-stage : Rust + docs (config-driven via manifest) |
+| `servers/rust-docs/fetch-docs.mjs` | Lit le manifest, fetch & transforme toutes les docs |
+| `servers/rust-docs/local-docs/` | Docs locales (induflow/, etc.) |
 
 ## Serveur Rust (servers/rust-docs/)
 
@@ -103,35 +105,79 @@ REMOTE_PATH=/public_html
 SSH_KEY=~/.ssh/mcp_deploy
 ```
 
-## Ajouter une nouvelle source de docs
+## Gestion de la config client (.mcp.json)
 
-Grâce à l'architecture multi-tenant, ajouter des docs ne nécessite plus de toucher au docker-compose ni à nginx.
+**Ne jamais éditer `.mcp.json` directement.** Il est généré depuis `servers-manifest.json`.
 
-**1. Source des docs :**
-- GitHub → `git clone --depth 1` dans le Dockerfile (stage node-builder)
-- `llms.txt` officiel → `curl -L <url> -o /tmp/<name>-docs.md`
-- Docs locales → placer les `.md` dans `servers/rust-docs/<name>/`
-
-**2. `servers/rust-docs/Dockerfile`** — ajouter dans le stage node-builder et copier dans le runtime :
-```dockerfile
-# Stage node-builder
-RUN git clone --depth 1 https://github.com/<org>/<repo> /tmp/<name>
-# Stage runtime
-COPY --from=node-builder /tmp/<name>/<docs-path>/ /docs/<name>/
+```bash
+node generate-configs.mjs        # génère dist/claude-mcp.json + codex-config.toml
+cp dist/claude-mcp.json ../.mcp.json
 ```
 
-**3. `servers-manifest.json`** — ajouter l'entrée dans `"docSources"`.
+### Ajouter un serveur MCP HTTP externe
 
-**4. Si la source est une spec OpenAPI (JSON/YAML) :** convertir en Markdown, supprimer les fichiers JSON/YAML/SVG — le serveur ne charge que les `.md`.
+Ajouter dans `servers-manifest.json` → `"external"` :
 
-**5. Déployer et vérifier :**
+```jsonc
+{
+  "name": "<name>",
+  "url": "https://example.com/mcp",
+  "description": "...",
+  "bearer_token_env_var": "MY_TOKEN"   // optionnel
+}
+```
+
+### Ajouter un serveur MCP stdio (npx / process local)
+
+Ajouter dans `servers-manifest.json` → `"stdio"` :
+
+```jsonc
+{
+  "name": "<name>",
+  "command": "npx",
+  "args": ["<package-name>"],
+  "description": "..."
+}
+```
+
+Puis régénérer : `node generate-configs.mjs && cp dist/claude-mcp.json ../.mcp.json`
+
+---
+
+## Ajouter une nouvelle source de docs (config-driven)
+
+Le build est piloté par `servers-manifest.json`. Ajouter une doc source = **modifier uniquement le manifest** (pas de Dockerfile/docker-compose/nginx à toucher).
+
+**1. Ajouter l'entrée dans `servers-manifest.json` → `"docSources"` :**
+
+```jsonc
+// Repo GitHub :
+{ "name": "<name>", "description": "...", "source": { "type": "git", "url": "https://github.com/<org>/<repo>", "docsPath": "src/" } }
+
+// URL unique (llms.txt) :
+{ "name": "<name>", "description": "...", "source": { "type": "url", "url": "https://example.com/llms.txt", "transforms": ["split"] } }
+
+// Docs locales :
+{ "name": "<name>", "description": "...", "source": { "type": "local", "path": "<name>/" } }
+```
+
+Pour les docs locales, placer les `.md` dans `servers/rust-docs/local-docs/<name>/`.
+
+**2. Transforms disponibles** (optionnels, appliqués dans l'ordre) :
+- `strip-mdx` — convertit `.mdx` → `.md` via remark AST
+- `generate-catalog` — génère le catalog des classes Tailwind CSS
+- `split` — découpe un fichier unique en un `.md` par heading
+
+**3. Si la source est une spec OpenAPI (JSON/YAML) :** convertir en Markdown, supprimer les fichiers JSON/YAML/SVG — le serveur ne charge que les `.md`.
+
+**4. Déployer et vérifier :**
 ```bash
 just ship
 # Sur le serveur distant :
 docker compose logs mcp-docs | grep "categories"
 ```
 
-Le serveur détecte automatiquement le nouveau sous-dossier dans `/docs/` comme catégorie.
+Le `fetch-docs.mjs` lit le manifest et orchestre le fetch/transform automatiquement. Le serveur détecte les nouveaux sous-dossiers dans `/docs/` comme catégories.
 
 ## Génération des configs clients
 
