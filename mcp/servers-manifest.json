@@ -5,27 +5,57 @@
   "docSources": [
     {
       "name": "leptos",
-      "description": "Leptos framework — official book (github.com/leptos-rs/book)"
+      "description": "Leptos framework — official book (github.com/leptos-rs/book)",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/leptos-rs/book",
+        "docsPath": "src/"
+      }
     },
     {
       "name": "leptos-use",
-      "description": "leptos-use hooks library (github.com/synphonyte/leptos-use)"
+      "description": "leptos-use hooks library (github.com/synphonyte/leptos-use)",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/synphonyte/leptos-use",
+        "docsPath": "docs/book/src/"
+      }
     },
     {
       "name": "rust",
-      "description": "The Rust Programming Language book (github.com/rust-lang/book)"
+      "description": "The Rust Programming Language book (github.com/rust-lang/book)",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/rust-lang/book",
+        "docsPath": "src/"
+      }
     },
     {
       "name": "daisyui",
-      "description": "DaisyUI component library reference (daisyui.com/llms.txt)"
+      "description": "DaisyUI component library reference (daisyui.com/llms.txt)",
+      "source": {
+        "type": "url",
+        "url": "https://daisyui.com/llms.txt",
+        "transforms": ["split"]
+      }
     },
     {
       "name": "induflow",
-      "description": "InduFlow PartHub API documentation"
+      "description": "InduFlow PartHub API documentation",
+      "source": {
+        "type": "local",
+        "path": "induflow/"
+      }
     },
     {
       "name": "tailwindcss",
-      "description": "Tailwind CSS v4 — docs + catalog complet des classes"
+      "description": "Tailwind CSS v4 — docs + catalog complet des classes",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/tailwindlabs/tailwindcss.com",
+        "docsPath": "src/docs/",
+        "transforms": ["strip-mdx", "generate-catalog"]
+      }
     }
   ],
   "external": [

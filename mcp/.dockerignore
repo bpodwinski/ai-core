@@ -1,0 +1,17 @@
+# Exclude everything not needed for the Docker build
+.env
+.env.*
+.git/
+dist/
+*.ps1
+cloudflared/
+oauth/
+nginx/
+*.md
+!servers-manifest.json
+
+# Rust build artifacts (594MB)
+servers/rust-docs/target/
+
+# Node modules (rebuilt in Docker)
+servers/rust-docs/node_modules/

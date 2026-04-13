@@ -52,7 +52,9 @@ services:
 
   # Single multi-tenant docs server — serves all doc sources via DOCS_PATH=/docs
   mcp-docs:
-    build: ./servers/rust-docs/
+    build:
+      context: .
+      dockerfile: servers/rust-docs/Dockerfile
     image: mcp-rust-docs:local
     container_name: mcp-docs
     restart: unless-stopped
