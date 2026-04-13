@@ -64,7 +64,13 @@
       "mcp__daisyui__list_topics",
       "WebFetch(domain:daisyui.com)",
       "mcp__daisyui__get_doc",
-      "mcp__daisyui__search_docs"
+      "mcp__daisyui__search_docs",
+      "Bash(ls -la /e/Dev/ai-core/*.txt /e/Dev/ai-core/*.toml /e/Dev/ai-core/*.cfg)",
+      "Bash(wc -l /e/Dev/ai-core/mcp/servers/rust-docs/src/*.rs /e/Dev/ai-core/mcp/oauth/*.js /e/Dev/ai-core/mcp/servers/rust-docs/*.mjs)",
+      "WebFetch(domain:mcp.benoitpodwinski.com)",
+      "Bash(find \"e:\\\\Dev\\\\ai-core\\\\.claude\\\\skills\" -type f -exec ls -lh {} \\\\;)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(find \"e:\\\\Dev\\\\ai-core\\\\.agents\\\\skills\" -type f -exec ls -lh {} \\\\;)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",

@@ -15,7 +15,7 @@ server {
     # Masquer la version nginx
     server_tokens off;
 
-    # Limiter la taille des requêtes (pas de body attendu sur les MCPs)
+    # Limiter la taille des requêtes
     client_max_body_size 1m;
 
     # OAuth discovery + endpoints (pas d'auth, rate limit dédié)
@@ -38,81 +38,11 @@ server {
         proxy_set_header        Authorization $http_authorization;
     }
 
-    # MCP Leptos — docs Leptos custom
-    location /leptos/ {
+    # MCP docs server — single multi-tenant instance serving all documentation
+    location /mcp {
         limit_req               zone=mcp_limit burst=20 nodelay;
         auth_request            /auth-check;
-        proxy_pass              http://mcp-leptos:80/;
-        proxy_buffering         off;
-        proxy_cache             off;
-        proxy_set_header        Connection '';
-        proxy_set_header        Host $host;
-        proxy_http_version      1.1;
-        chunked_transfer_encoding off;
-        proxy_read_timeout      86400s;
-    }
-
-    # MCP leptos-use — docs leptos-use (clonées depuis GitHub)
-    location /leptos-use/ {
-        limit_req               zone=mcp_limit burst=20 nodelay;
-        auth_request            /auth-check;
-        proxy_pass              http://mcp-leptos-use:80/;
-        proxy_buffering         off;
-        proxy_cache             off;
-        proxy_set_header        Connection '';
-        proxy_set_header        Host $host;
-        proxy_http_version      1.1;
-        chunked_transfer_encoding off;
-        proxy_read_timeout      86400s;
-    }
-
-    # MCP Rust Book
-    location /rust/ {
-        limit_req               zone=mcp_limit burst=20 nodelay;
-        auth_request            /auth-check;
-        proxy_pass              http://mcp-rust:80/;
-        proxy_buffering         off;
-        proxy_cache             off;
-        proxy_set_header        Connection '';
-        proxy_set_header        Host $host;
-        proxy_http_version      1.1;
-        chunked_transfer_encoding off;
-        proxy_read_timeout      86400s;
-    }
-
-    # MCP DaisyUI
-    location /daisyui/ {
-        limit_req               zone=mcp_limit burst=20 nodelay;
-        auth_request            /auth-check;
-        proxy_pass              http://mcp-daisyui:80/;
-        proxy_buffering         off;
-        proxy_cache             off;
-        proxy_set_header        Connection '';
-        proxy_set_header        Host $host;
-        proxy_http_version      1.1;
-        chunked_transfer_encoding off;
-        proxy_read_timeout      86400s;
-    }
-
-    # MCP InduFlow PartHub API
-    location /induflow/ {
-        limit_req               zone=mcp_limit burst=20 nodelay;
-        auth_request            /auth-check;
-        proxy_pass              http://mcp-induflow:80/;
-        proxy_buffering         off;
-        proxy_cache             off;
-        proxy_set_header        Connection '';
-        proxy_set_header        Host $host;
-        proxy_http_version      1.1;
-        chunked_transfer_encoding off;
-        proxy_read_timeout      86400s;
-    }
-
-    # MCP TailwindCSS
-    location /tailwindcss/ {
-        limit_req               zone=mcp_limit burst=20 nodelay;
-        auth_request            /auth-check;
-        proxy_pass              http://mcp-tailwindcss:80/;
+        proxy_pass              http://mcp-docs:80/mcp;
         proxy_buffering         off;
         proxy_cache             off;
         proxy_set_header        Connection '';

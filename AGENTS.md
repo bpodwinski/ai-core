@@ -87,28 +87,29 @@ Claude Code ne scanne pas `.agents/skills/` — les deux répertoires sont oblig
 
 ## MCP Server Infrastructure
 
-Self-hosted MCP servers at `mcp/`, accessible via `https://mcp.benoitpodwinski.com/<name>/mcp`. All servers share a single Rust binary (`mcp-rust-docs`) serving different docs via `DOCS_PATH`.
+Self-hosted multi-tenant MCP docs server at `mcp/`, accessible via `https://mcp.benoitpodwinski.com/mcp`. A single Rust binary (`mcp-rust-docs`) loads all documentation from `/docs/` and serves them through one endpoint with category-based filtering.
 
 ### Architecture
 
 ```
-Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → mcp-<name>:80
+Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → mcp-docs:80
 ```
 
+- Single multi-tenant container serving all doc sources
 - OAuth 2.1 PKCE via `mcp/oauth/server.js`
 - Transport: Streamable HTTP (`rmcp` Rust SDK)
-- Client config: `"type": "http"` in `.mcp.json`
+- Client config: one entry `"docs"` in `.mcp.json`
 
-### Current MCP servers
+### Doc sources (categories)
 
-| Path | Service | Pages | Source |
-|------|---------|-------|--------|
-| `/leptos/` | mcp-leptos | 60 | `github.com/leptos-rs/book` |
-| `/leptos-use/` | mcp-leptos-use | 98 | `github.com/synphonyte/leptos-use` |
-| `/rust/` | mcp-rust | 112 | `github.com/rust-lang/book` |
-| `/daisyui/` | mcp-daisyui | 1 | `https://daisyui.com/llms.txt` |
-| `/induflow/` | mcp-induflow | 8 | Local docs in `mcp/servers/rust-docs/induflow/` |
-| `/tailwindcss/` | mcp-tailwindcss | 195 | `github.com/tailwindlabs/tailwindcss.com` + catalog généré |
+| Category | Source |
+|----------|--------|
+| `leptos` | `github.com/leptos-rs/book` |
+| `leptos-use` | `github.com/synphonyte/leptos-use` |
+| `rust` | `github.com/rust-lang/book` |
+| `daisyui` | `https://daisyui.com/llms.txt` |
+| `induflow` | Local docs in `mcp/servers/rust-docs/induflow/` |
+| `tailwindcss` | `github.com/tailwindlabs/tailwindcss.com` + catalog généré |
 
 ### MCP Commands
 
@@ -124,9 +125,9 @@ just down         # Stop
 just logs         # View logs
 ```
 
-### Adding a new MCP server
+### Adding a new doc source
 
-When the user asks to create a new MCP server, follow these steps:
+When the user asks to add docs to the MCP server, follow these steps:
 
 **1. Determine the doc source:**
 - **GitHub repo with markdown docs** → add `git clone` in Dockerfile
@@ -135,54 +136,22 @@ When the user asks to create a new MCP server, follow these steps:
 
 **2. Update `mcp/servers/rust-docs/Dockerfile`:**
 ```dockerfile
-# For GitHub source:
+# For GitHub source (stage node-builder):
 RUN git clone --depth 1 https://github.com/<org>/<repo> /tmp/<name>
 # In the runtime stage:
-COPY --from=builder /tmp/<name>/<docs-path>/ /docs/<name>/
+COPY --from=node-builder /tmp/<name>/<docs-path>/ /docs/<name>/
 
 # For local docs:
 COPY <name>/ /docs/<name>/
 ```
 
-**3. Update `mcp/docker-compose.yml`:**
-```yaml
-mcp-<name>:
-  image: mcp-rust-docs:local
-  container_name: mcp-<name>
-  restart: unless-stopped
-  expose:
-    - "80"
-  environment:
-    DOCS_PATH: /docs/<name>
-```
-Add `mcp-<name>` to nginx's `depends_on`.
+No changes needed to docker-compose.yml or nginx — the server auto-discovers all categories under `/docs/`.
 
-**4. Update `mcp/nginx/mcp.conf.template`:**
-```nginx
-location /<name>/ {
-    auth_request            /auth-check;
-    proxy_pass              http://mcp-<name>:80/;
-    proxy_buffering         off;
-    proxy_cache             off;
-    proxy_set_header        Connection '';
-    proxy_set_header        Host $host;
-    proxy_http_version      1.1;
-    chunked_transfer_encoding off;
-    proxy_read_timeout      86400s;
-}
-```
+**3. Update `mcp/servers-manifest.json`** — add entry in `"docSources"`.
 
-**5. Generate `.mcp.json` entry:**
-```json
-"<name>": {
-  "type": "http",
-  "url": "https://mcp.benoitpodwinski.com/<name>/mcp"
-}
-```
-
-**6. If the source has an OpenAPI spec (JSON/YAML):**
+**4. If the source has an OpenAPI spec (JSON/YAML):**
 Convert it to markdown (`<name>-api-reference.md`) with endpoints, params, schemas, and auth details. Delete the original JSON/YAML/SVG files — the server only loads `.md`.
 
-**7. Deploy:** `just deploy`
+**5. Deploy:** `just ship`
 
-**8. Verify:** `docker compose logs mcp-<name> | grep "Loaded"` on the server.
+**6. Verify:** `docker compose logs mcp-docs | grep "categories"` on the server.

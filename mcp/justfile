@@ -10,9 +10,9 @@ build:
 check:
     Set-Location {{rust-docs}}; cargo check
 
-# Build Docker image (shared by all rust-docs MCP services)
+# Build Docker image (single multi-tenant docs server)
 docker-build:
-    docker compose build mcp-leptos
+    docker compose build mcp-docs
 
 # Start the full stack locally
 up:
@@ -22,7 +22,7 @@ up:
 down:
     docker compose down
 
-# Show logs (ex: just logs mcp-leptos)
+# Show logs (ex: just logs mcp-docs)
 logs *ARGS:
     docker compose logs -f {{ARGS}}
 
@@ -33,6 +33,6 @@ deploy:
 # Build + deploy
 ship: docker-build deploy
 
-# Restart a service (ex: just restart mcp-leptos)
+# Restart a service (ex: just restart mcp-docs)
 restart SERVICE:
     docker compose restart {{SERVICE}}

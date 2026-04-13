@@ -20,20 +20,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(
   readFileSync(resolve(__dirname, 'servers-manifest.json'), 'utf8')
 );
-const { baseUrl, servers, external = [] } = manifest;
+const { baseUrl, mcpEndpoint, mcpName, docSources = [], external = [] } = manifest;
 
 // ── Claude Code : claude-mcp.json → .mcp.json ────────────────────────────────
-// OAuth 2.1 PKCE géré nativement par Claude Code pour les serveurs self-hosted.
-// Serveurs externes : pas d'auth, URL directe.
+// Multi-tenant : un seul endpoint pour toutes les doc sources.
+// OAuth 2.1 PKCE géré nativement par Claude Code.
 const claudeConfig = {
   mcpServers: {
-    // Self-hosted (OAuth)
-    ...Object.fromEntries(
-      servers.map(s => [
-        s.name,
-        { type: 'http', url: `${baseUrl}/${s.name}/mcp` }
-      ])
-    ),
+    // Self-hosted multi-tenant docs server
+    [mcpName]: { type: 'http', url: `${baseUrl}${mcpEndpoint}` },
     // External (pas d'auth)
     ...Object.fromEntries(
       external.map(s => [
@@ -54,16 +49,13 @@ function generateCodexToml() {
     '#   curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/codex-config.toml \\',
     '#        >> ~/.codex/config.toml',
     '#',
-    '# Auth self-hosted — OAuth PKCE : codex mcp login <server-name>',
+    '# Auth : codex mcp login docs',
+    '',
+    `[mcp_servers.${mcpName}]`,
+    `url = "${baseUrl}${mcpEndpoint}"`,
+    `# Multi-tenant docs server — categories: ${docSources.map(s => s.name).join(', ')}`,
     '',
   ].join('\n');
-
-  const selfHostedBlocks = servers.map(s => [
-    `[mcp_servers.${s.name}]`,
-    `url = "${baseUrl}/${s.name}/mcp"`,
-    `# description = "${s.description}"`,
-    '',
-  ].join('\n'));
 
   const externalHeader = external.length > 0
     ? '# ── External MCP servers ─────────────────────────────────────────────────────\n\n'
@@ -82,10 +74,7 @@ function generateCodexToml() {
     return lines.join('\n');
   });
 
-  return header
-    + selfHostedBlocks.join('\n')
-    + externalHeader
-    + externalBlocks.join('\n');
+  return header + externalHeader + externalBlocks.join('\n');
 }
 
 // ── Écriture ──────────────────────────────────────────────────────────────────
@@ -102,5 +91,5 @@ for (const { path, content } of outputs) {
   console.log(`Written: ${path}`);
 }
 
-const total = servers.length + external.length;
-console.log(`\n${servers.length} self-hosted + ${external.length} external = ${total} servers`);
+const total = 1 + external.length; // 1 multi-tenant + external
+console.log(`\n1 multi-tenant (${docSources.length} doc sources) + ${external.length} external = ${total} servers`);
