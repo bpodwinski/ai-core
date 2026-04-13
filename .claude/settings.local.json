@@ -70,11 +70,17 @@
       "WebFetch(domain:mcp.benoitpodwinski.com)",
       "Bash(find \"e:\\\\Dev\\\\ai-core\\\\.claude\\\\skills\" -type f -exec ls -lh {} \\\\;)",
       "Bash(awk '{print $5, $9}')",
-      "Bash(find \"e:\\\\Dev\\\\ai-core\\\\.agents\\\\skills\" -type f -exec ls -lh {} \\\\;)"
+      "Bash(find \"e:\\\\Dev\\\\ai-core\\\\.agents\\\\skills\" -type f -exec ls -lh {} \\\\;)",
+      "Bash(ls -la .claude/skills/)",
+      "Bash(ls -la skills/)",
+      "Bash(rmdir .claude/skills)",
+      "Bash(cmd //c \"mklink /J .claude\\\\skills E:\\\\Dev\\\\ai-core\\\\skills\")",
+      "Bash(ls -la .agents/skills/)",
+      "Bash(ls -la .agents/)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Admin\\.claude\\skills",
-      "e:\\Dev\\ai-core\\.claude\\skills\\rust-unit-tests",
+      "e:\\Dev\\ai-core\\skills",
       "\\tmp",
       "E:\\Dev\\ai-core"
     ]
@@ -82,7 +88,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|Bash",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
