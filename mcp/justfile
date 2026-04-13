@@ -36,3 +36,8 @@ ship: docker-build deploy
 # Restart a service (ex: just restart mcp-docs)
 restart SERVICE:
     docker compose restart {{SERVICE}}
+
+# Run integration tests (requires mcp-docs running)
+test:
+    docker compose up -d mcp-docs
+    bash tests/test-cache-features.sh
