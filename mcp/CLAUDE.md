@@ -105,6 +105,45 @@ REMOTE_PATH=/public_html
 SSH_KEY=~/.ssh/mcp_deploy
 ```
 
+## Gestion de la config client (.mcp.json)
+
+**Ne jamais éditer `.mcp.json` directement.** Il est généré depuis `servers-manifest.json`.
+
+```bash
+node generate-configs.mjs        # génère dist/claude-mcp.json + codex-config.toml
+cp dist/claude-mcp.json ../.mcp.json
+```
+
+### Ajouter un serveur MCP HTTP externe
+
+Ajouter dans `servers-manifest.json` → `"external"` :
+
+```jsonc
+{
+  "name": "<name>",
+  "url": "https://example.com/mcp",
+  "description": "...",
+  "bearer_token_env_var": "MY_TOKEN"   // optionnel
+}
+```
+
+### Ajouter un serveur MCP stdio (npx / process local)
+
+Ajouter dans `servers-manifest.json` → `"stdio"` :
+
+```jsonc
+{
+  "name": "<name>",
+  "command": "npx",
+  "args": ["<package-name>"],
+  "description": "..."
+}
+```
+
+Puis régénérer : `node generate-configs.mjs && cp dist/claude-mcp.json ../.mcp.json`
+
+---
+
 ## Ajouter une nouvelle source de docs (config-driven)
 
 Le build est piloté par `servers-manifest.json`. Ajouter une doc source = **modifier uniquement le manifest** (pas de Dockerfile/docker-compose/nginx à toucher).

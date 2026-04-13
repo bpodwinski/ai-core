@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(
   readFileSync(resolve(__dirname, 'servers-manifest.json'), 'utf8')
 );
-const { baseUrl, mcpEndpoint, mcpName, docSources = [], external = [] } = manifest;
+const { baseUrl, mcpEndpoint, mcpName, docSources = [], external = [], stdio = [] } = manifest;
 
 // ── Claude Code : claude-mcp.json → .mcp.json ────────────────────────────────
 // Multi-tenant : un seul endpoint pour toutes les doc sources.
@@ -29,11 +29,18 @@ const claudeConfig = {
   mcpServers: {
     // Self-hosted multi-tenant docs server
     [mcpName]: { type: 'http', url: `${baseUrl}${mcpEndpoint}` },
-    // External (pas d'auth)
+    // External HTTP (pas d'auth)
     ...Object.fromEntries(
       external.map(s => [
         s.name,
         { type: 'http', url: s.url }
+      ])
+    ),
+    // Stdio (process local via npx/node/etc.)
+    ...Object.fromEntries(
+      stdio.map(s => [
+        s.name,
+        { type: 'stdio', command: s.command, args: s.args }
       ])
     ),
   }
@@ -91,5 +98,5 @@ for (const { path, content } of outputs) {
   console.log(`Written: ${path}`);
 }
 
-const total = 1 + external.length; // 1 multi-tenant + external
-console.log(`\n1 multi-tenant (${docSources.length} doc sources) + ${external.length} external = ${total} servers`);
+const total = 1 + external.length + stdio.length; // 1 multi-tenant + external + stdio
+console.log(`\n1 multi-tenant (${docSources.length} doc sources) + ${external.length} external + ${stdio.length} stdio = ${total} servers`);

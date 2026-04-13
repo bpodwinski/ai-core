@@ -127,6 +127,45 @@ just down         # Stop
 just logs         # View logs
 ```
 
+### Client config (.mcp.json)
+
+**Never edit `.mcp.json` directly.** It is generated from `mcp/servers-manifest.json`.
+
+```bash
+node mcp/generate-configs.mjs   # génère dist/claude-mcp.json
+cp dist/claude-mcp.json .mcp.json
+```
+
+### Adding an external HTTP MCP server
+
+Add an entry in `mcp/servers-manifest.json` → `"external"`:
+
+```jsonc
+{
+  "name": "<name>",
+  "url": "https://example.com/mcp",
+  "description": "...",
+  "bearer_token_env_var": "MY_TOKEN"   // optionnel
+}
+```
+
+Then regenerate: `node mcp/generate-configs.mjs && cp dist/claude-mcp.json .mcp.json`
+
+### Adding a stdio MCP server (npx / local process)
+
+Add an entry in `mcp/servers-manifest.json` → `"stdio"`:
+
+```jsonc
+{
+  "name": "<name>",
+  "command": "npx",
+  "args": ["<package-name>"],
+  "description": "..."
+}
+```
+
+Then regenerate: `node mcp/generate-configs.mjs && cp dist/claude-mcp.json .mcp.json`
+
 ### Adding a new doc source (config-driven)
 
 The build is driven by `mcp/servers-manifest.json`. Adding a new doc source requires **only editing the manifest** (no Dockerfile/docker-compose/nginx changes).
