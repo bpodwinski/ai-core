@@ -155,16 +155,27 @@ Le serveur `mcp-docs` embarque `rust-docs-mcp` (snowmead) comme subprocess persi
 
 | Tool | Description |
 |------|-------------|
-| `cache_crate` | Télécharge et cache une crate (cratesio / github / local) |
+| `cache_crate` | Télécharge et cache une crate (cratesio / github / local). Params: `members` (workspaces), `update` (force re-cache) |
 | `list_cached_crates` | Liste les crates en cache avec leur taille |
-| `search_crate_items` | Recherche d'items par pattern (champs requis : `crate_name`, `version`, `pattern`) |
-| `get_item_details` | Signature complète + docs d'un item (`item_id` est un entier i32) |
+| `list_crate_versions` | Liste les versions disponibles sur crates.io |
+| `search_crate_items` | Recherche par pattern (`crate_name`, `version`, `pattern`). Params optionnels : `kind_filter`, `limit`, `offset`, `path_filter`, `member` |
+| `search_crate_items_fuzzy` | Recherche floue tolérante aux typos (`query`, `fuzzy_distance` 0-2) |
+| `list_crate_items` | Liste tous les items d'une crate (avec pagination et `kind_filter`) |
+| `get_item_details` | Signature complète + docs d'un item (`item_id` entier i32) |
+| `get_item_docs` | Documentation seule d'un item (plus léger que `get_item_details`) |
 | `get_item_source` | Code source d'un item |
 | `get_crate_dependencies` | Arbre de dépendances |
+| `remove_crate` | Supprime une crate du cache |
 
 **Cache** persistant dans le volume Docker `rust_docs_cache`.
 
-**Prérequis runtime :** toolchain nightly dans le container (`RUST_DOCS_MCP_TOOLCHAIN=nightly`, installé via rustup dans le Dockerfile).
+**Prérequis runtime :** toolchain nightly dans le container (`RUST_DOCS_MCP_TOOLCHAIN=nightly`), packages `build-essential pkg-config libssl-dev libclang-dev` (requis pour crates comme sqlx/bindgen).
+
+**Variables d'environnement runtime :**
+- `RUSTFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"` — active les features unstable de tokio et reqwest
+- `RUSTDOCFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"` — idem pour rustdoc
+
+**Limitation connue :** chrono ne peut pas être caché — rust-docs-mcp force `--all-features` en interne et les features `size_16/32/64` de rkyv sont mutuellement exclusives. Limitation upstream.
 
 ---
 
