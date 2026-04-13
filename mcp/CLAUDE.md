@@ -155,7 +155,7 @@ Le serveur `mcp-docs` embarque `rust-docs-mcp` (snowmead) comme subprocess persi
 
 | Tool | Description |
 |------|-------------|
-| `cache_crate` | Télécharge et cache une crate (cratesio / github / local). Params: `members` (workspaces), `update` (force re-cache) |
+| `cache_crate` | Télécharge et cache une crate (cratesio / github / local). Params: `members` (workspaces), `update` (force re-cache), `features` (features spécifiques pour compat mutually exclusive) |
 | `list_cached_crates` | Liste les crates en cache avec leur taille |
 | `list_crate_versions` | Liste les versions disponibles sur crates.io |
 | `search_crate_items` | Recherche par pattern (`crate_name`, `version`, `pattern`). Params optionnels : `kind_filter`, `limit`, `offset`, `path_filter`, `member` |
@@ -175,7 +175,14 @@ Le serveur `mcp-docs` embarque `rust-docs-mcp` (snowmead) comme subprocess persi
 - `RUSTFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"` — active les features unstable de tokio et reqwest
 - `RUSTDOCFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"` — idem pour rustdoc
 
-**Limitation connue :** chrono ne peut pas être caché — rust-docs-mcp force `--all-features` en interne et les features `size_16/32/64` de rkyv sont mutuellement exclusives. Limitation upstream.
+**Paramètre `features` :** rust-docs-mcp utilise `--all-features` par défaut. Pour les crates avec features mutuellement exclusives, utiliser le paramètre `features` :
+
+```
+cache_crate({ crate_name: "leptos-use", source_type: "cratesio", version: "0.15.8", features: ["axum"] })
+cache_crate({ crate_name: "chrono", source_type: "cratesio", version: "0.4.41", features: [] })
+```
+
+Sans `features`, la stratégie `--all-features` par défaut est utilisée avec fallback automatique.
 
 ---
 

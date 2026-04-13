@@ -182,7 +182,7 @@ cache_crate({ crate_name: "axum", source_type: "cratesio", version: "0.8.8" })
 
 | Tool | Description |
 |------|-------------|
-| `cache_crate` | Download & cache a crate (cratesio / github / local). Params: `members` (workspaces), `update` (force re-cache) |
+| `cache_crate` | Download & cache a crate (cratesio / github / local). Params: `members` (workspaces), `update` (force re-cache), `features` (specific features for mutually exclusive feature compat) |
 | `list_cached_crates` | List cached crates with sizes |
 | `list_crate_versions` | List available versions on crates.io |
 | `search_crate_items` | Search items by pattern (`crate_name`, `version`, `pattern`). Optional: `kind_filter`, `limit`, `offset`, `path_filter`, `member` |
@@ -200,7 +200,14 @@ cache_crate({ crate_name: "axum", source_type: "cratesio", version: "0.8.8" })
 
 **Runtime env vars:** `RUSTFLAGS` and `RUSTDOCFLAGS` include `--cfg tokio_unstable --cfg reqwest_unstable` to support crates with unstable features.
 
-**Known limitation:** chrono cannot be cached — rust-docs-mcp forces `--all-features` internally and rkyv's `size_16/32/64` features are mutually exclusive. Upstream limitation.
+**`features` parameter:** rust-docs-mcp uses `--all-features` by default. For crates with mutually exclusive features, use the `features` parameter to select specific features:
+
+```
+cache_crate({ crate_name: "leptos-use", source_type: "cratesio", version: "0.15.8", features: ["axum"] })
+cache_crate({ crate_name: "chrono", source_type: "cratesio", version: "0.4.41", features: [] })
+```
+
+When `features` is omitted, the default `--all-features` strategy is used with automatic fallback.
 
 ### Adding a new doc source (config-driven)
 
