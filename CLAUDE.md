@@ -125,33 +125,33 @@ just down         # Stop
 just logs         # View logs
 ```
 
-### Adding a new doc source
+### Adding a new doc source (config-driven)
 
-When the user asks to add docs to the MCP server, follow these steps:
+The build is driven by `mcp/servers-manifest.json`. Adding a new doc source requires **only editing the manifest** (no Dockerfile/docker-compose/nginx changes).
 
-**1. Determine the doc source:**
-- **GitHub repo with markdown docs** → add `git clone` in Dockerfile
-- **Official `llms.txt` endpoint** → download it in Dockerfile and rename it to `.md`
-- **Local docs** → place `.md` files in `mcp/servers/rust-docs/<name>/` and `COPY` in Dockerfile
+**1. Add entry in `mcp/servers-manifest.json` → `"docSources"`:**
 
-**2. Update `mcp/servers/rust-docs/Dockerfile`:**
-```dockerfile
-# For GitHub source (stage node-builder):
-RUN git clone --depth 1 https://github.com/<org>/<repo> /tmp/<name>
-# In the runtime stage:
-COPY --from=node-builder /tmp/<name>/<docs-path>/ /docs/<name>/
+```jsonc
+// GitHub repo:
+{ "name": "<name>", "description": "...", "source": { "type": "git", "url": "https://github.com/<org>/<repo>", "docsPath": "src/" } }
 
-# For local docs:
-COPY <name>/ /docs/<name>/
+// Single URL (llms.txt):
+{ "name": "<name>", "description": "...", "source": { "type": "url", "url": "https://example.com/llms.txt", "transforms": ["split"] } }
+
+// Local docs:
+{ "name": "<name>", "description": "...", "source": { "type": "local", "path": "<name>/" } }
 ```
 
-No changes needed to docker-compose.yml or nginx — the server auto-discovers all categories under `/docs/`.
+For local docs, place `.md` files in `mcp/servers/rust-docs/local-docs/<name>/`.
 
-**3. Update `mcp/servers-manifest.json`** — add entry in `"docSources"`.
+**2. Available transforms** (optional, applied in order):
+- `strip-mdx` — convert `.mdx` → `.md` via remark AST
+- `generate-catalog` — generate Tailwind CSS class catalog
+- `split` — split single file into per-heading `.md` files
 
-**4. If the source has an OpenAPI spec (JSON/YAML):**
-Convert it to markdown (`<name>-api-reference.md`) with endpoints, params, schemas, and auth details. Delete the original JSON/YAML/SVG files — the server only loads `.md`.
+**3. If the source has an OpenAPI spec (JSON/YAML):**
+Convert it to markdown (`<name>-api-reference.md`). Delete the original JSON/YAML/SVG files — the server only loads `.md`.
 
-**5. Deploy:** `just ship`
+**4. Deploy:** `just ship`
 
-**6. Verify:** `docker compose logs mcp-docs | grep "categories"` on the server.
+**5. Verify:** `docker compose logs mcp-docs | grep "categories"` on the server.
