@@ -27,10 +27,10 @@ jobs:
 
       - name: Package all configs
         run: |
-          mkdir -p staging/.claude/hooks
-          cp dist/claude-mcp.json   staging/.mcp.json
-          cp dist/codex-config.toml staging/codex-config.toml
-          cp .claude/settings.json  staging/.claude/settings.json
+          mkdir -p staging/.claude/hooks staging/.codex
+          cp dist/claude-mcp.json        staging/.mcp.json
+          cp dist/codex-config.toml      staging/.codex/config.toml
+          cp .claude/settings.json       staging/.claude/settings.json
           cp .claude/hooks/rust-check.py staging/.claude/hooks/rust-check.py
           cd staging && zip -r ../dist/claude-config.zip .
 
