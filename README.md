@@ -1,52 +1,52 @@
 # ai-core
 
-Infrastructure Docker personnelle : serveurs MCP self-hosted.
+Personal Docker infrastructure: self-hosted MCP servers.
 
 ## MCP Servers
 
-Serveurs MCP accessibles via `https://mcp.benoitpodwinski.com/<name>/mcp`.
+MCP servers exposed via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 
-**Self-hosted** (`mcp.benoitpodwinski.com`) :
+**Self-hosted** (`mcp.benoitpodwinski.com`):
 
-| Serveur | Contenu |
-|---------|---------|
+| Server | Content |
+|--------|---------|
 | `leptos` | Leptos framework book |
 | `leptos-use` | leptos-use hooks library |
 | `rust` | The Rust Programming Language book |
 | `daisyui` | DaisyUI component library |
 | `induflow` | InduFlow PartHub API |
-| `tailwindcss` | Tailwind CSS v4 — docs + catalog complet |
+| `tailwindcss` | Tailwind CSS v4 — docs + full catalog |
 
-**Externes** (publics, sans auth) :
+**External** (public, no auth):
 
-| Serveur | Contenu |
-|---------|---------|
+| Server | Content |
+|--------|---------|
 | `openai-docs` | OpenAI developer docs — API, Codex, ChatGPT Apps SDK |
 | `github` | GitHub — PRs, issues, repos (`export GITHUB_TOKEN=…`) |
 
 ### Claude Code
 
-Copier `.mcp.json` à la racine du projet :
+Drop `.mcp.json` at the project root:
 
 ```bash
 curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/claude-mcp.json > .mcp.json
 ```
 
-L'authentification est gérée automatiquement via OAuth 2.1 PKCE.
+Authentication is handled automatically via OAuth 2.1 PKCE.
 
 ### Codex CLI
 
-Ajouter les serveurs à `~/.codex/config.toml` :
+Append the servers to `~/.codex/config.toml`:
 
 ```bash
 curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/codex-config.toml \
      >> ~/.codex/config.toml
 ```
 
-Puis s'authentifier sur les serveurs self-hosted :
+Then authenticate against the self-hosted servers:
 
 ```bash
-# OAuth PKCE (par serveur)
+# OAuth PKCE (per server)
 codex mcp login leptos
 codex mcp login leptos-use
 codex mcp login rust
@@ -54,43 +54,43 @@ codex mcp login daisyui
 codex mcp login induflow
 codex mcp login tailwindcss
 
-# GitHub (token personnel)
+# GitHub (personal token)
 export GITHUB_TOKEN=ghp_…
 ```
 
-### Déployer
+### Deploy
 
-Le workflow [mcp-deploy.yml](.github/workflows/mcp-deploy.yml) se déclenche
-automatiquement sur push vers `main` quand des fichiers sous `mcp/` changent.
+The [mcp-deploy.yml](.github/workflows/mcp-deploy.yml) workflow runs
+automatically on push to `main` whenever files under `mcp/` change.
 
-Utilise un **self-hosted runner** installé sur le serveur — pas de SSH sortant requis.
+It uses a **self-hosted runner** installed on the server — no outbound SSH required.
 
-**Installation du runner** (une seule fois sur le serveur) :
+**Runner install** (one-time, on the server):
 
 ```bash
 # Repo Settings → Actions → Runners → New self-hosted runner → Linux
-# Suivre les instructions, puis installer comme service :
+# Follow the instructions, then install as a service:
 sudo ./svc.sh install && sudo ./svc.sh start
 
-# Le runner doit avoir accès à Docker :
+# The runner needs Docker access:
 sudo usermod -aG docker <runner-user>
 ```
 
-Secret GitHub requis (`Settings → Secrets → Actions`) :
+Required GitHub secret (`Settings → Secrets → Actions`):
 
-| Secret | Exemple |
+| Secret | Example |
 |--------|---------|
 | `DEPLOY_PATH` | `/opt/mcp` |
 
-### Mettre à jour les configs
+### Updating configs
 
-Les configs sont publiées automatiquement par GitHub Actions à chaque changement de
-`mcp/servers-manifest.json`. Chaque release est versionnée (`mcp-configs-YYYYMMDD-<run>`)
-et marquée comme latest — les URLs `/releases/latest/download/` pointent toujours
-sur la version la plus récente.
+Configs are published automatically by GitHub Actions whenever
+`mcp/servers-manifest.json` changes. Each release is versioned
+(`mcp-configs-YYYYMMDD-<run>`) and tagged as latest — the
+`/releases/latest/download/` URLs always point to the most recent version.
 
-[Voir toutes les releases →](https://github.com/bpodwinski/ai-core/releases)
+[See all releases →](https://github.com/bpodwinski/ai-core/releases)
 
 ```bash
-node mcp/generate-configs.mjs   # régénérer localement (dist/ gitignored)
+node mcp/generate-configs.mjs   # regenerate locally (dist/ is gitignored)
 ```
