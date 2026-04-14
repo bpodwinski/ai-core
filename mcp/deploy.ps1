@@ -15,31 +15,61 @@ Get-Content $envFile | ForEach-Object {
     }
 }
 
-# Chemin SSH (Windows natif si disponible, sinon ssh du PATH)
 $SSH_CMD = if ($env:SSH_CMD) { $env:SSH_CMD } else { "ssh" }
 
-# Construire les chaînes en dehors de l'interpolation pour éviter
-# l'ambiguïté du ":" avec la syntaxe de scope PowerShell ($env:, etc.)
-$remoteTarget  = $REMOTE_USER + "@" + $REMOTE_HOST
-$rsyncDest     = $remoteTarget + ":" + $REMOTE_PATH + "/"
-$sshTransport  = $SSH_CMD + " -p " + $REMOTE_PORT + " -i " + $SSH_KEY
+# Construire les chaînes sans interpolation ":" pour éviter l'ambiguïté PS
+$remoteTarget = $REMOTE_USER + "@" + $REMOTE_HOST
+$rsyncDest    = $remoteTarget + ":" + $REMOTE_PATH + "/"
+$sshTransport = $SSH_CMD + " -p " + $REMOTE_PORT + " -i " + $SSH_KEY
 
-# ── 1. Sync des fichiers via rsync ────────────────────────────────────────────
-Write-Host "==> Syncing files to $rsyncDest ..."
+# Détecter rsync — natif ou via Git for Windows
+$rsyncCmd = Get-Command rsync -ErrorAction SilentlyContinue
+if (-not $rsyncCmd) {
+    $gitRsync = "C:\Program Files\Git\usr\bin\rsync.exe"
+    if (Test-Path $gitRsync) { $rsyncCmd = $gitRsync }
+}
 
-& rsync -az --delete `
-    --exclude='.git/' `
-    --exclude='.env' `
-    --exclude='.env.*' `
-    --exclude='node_modules/' `
-    --exclude='servers/rust-docs/target/' `
-    -e $sshTransport `
-    "$scriptDir/" `
-    $rsyncDest
+# ── 1. Sync des fichiers ──────────────────────────────────────────────────────
+if ($rsyncCmd) {
+    # rsync disponible — sync efficace en une seule session SSH
+    Write-Host "==> Syncing (rsync) to $rsyncDest ..."
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "rsync a échoué (exit $LASTEXITCODE)"
-    exit 1
+    & $rsyncCmd -az --delete `
+        --exclude='.git/' `
+        --exclude='.env' `
+        --exclude='.env.*' `
+        --exclude='node_modules/' `
+        --exclude='servers/rust-docs/target/' `
+        -e $sshTransport `
+        "$scriptDir/" `
+        $rsyncDest
+
+    if ($LASTEXITCODE -ne 0) { Write-Error "rsync a échoué (exit $LASTEXITCODE)"; exit 1 }
+
+} else {
+    # Fallback SCP — copie fichier par fichier
+    Write-Host "==> Syncing (scp) to $remoteTarget ..."
+
+    $excludeDirs  = @('.git', 'node_modules', 'target')
+    $excludeFiles = @('.env', '.env.deploy', '.env.deploy.example')
+
+    $items = Get-ChildItem -Path $scriptDir -Recurse -File | Where-Object {
+        $rel   = $_.FullName.Substring($scriptDir.Length + 1)
+        $parts = $rel.Split('\')
+        $inExcludedDir  = $parts | Where-Object { $excludeDirs -contains $_ }
+        $isExcludedFile = $excludeFiles -contains $_.Name
+        (-not $inExcludedDir) -and (-not $isExcludedFile)
+    }
+
+    foreach ($item in $items) {
+        $rel        = $item.FullName.Substring($scriptDir.Length + 1).Replace('\', '/')
+        $remotePath = $REMOTE_PATH + "/" + $rel
+        $remoteDir  = $remotePath -replace '/[^/]+$', ''
+
+        & $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY $remoteTarget "mkdir -p '$remoteDir'" 2>$null
+        & scp -P $REMOTE_PORT -i $SSH_KEY $item.FullName ($remoteTarget + ":" + $remotePath) | Out-Null
+        Write-Host "  $rel"
+    }
 }
 
 # ── 2. Rebuild des containers ─────────────────────────────────────────────────
@@ -48,9 +78,6 @@ Write-Host "==> Rebuilding containers..."
 & $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY $remoteTarget `
     "docker compose up -d --build --force-recreate"
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "docker compose a échoué (exit $LASTEXITCODE)"
-    exit 1
-}
+if ($LASTEXITCODE -ne 0) { Write-Error "docker compose a échoué (exit $LASTEXITCODE)"; exit 1 }
 
 Write-Host "==> Done."
