@@ -22,3 +22,6 @@ dist/
 # Junction/symlink — source is skills/ at project root
 .claude/skills
 .agents/skills
+
+# Local machine-specific Claude settings (contains SSH paths, server hostnames)
+.claude/settings.local.json
