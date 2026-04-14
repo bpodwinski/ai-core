@@ -11,7 +11,7 @@ Docker-based n8n workflow automation system with custom Python IMAP microservice
 
 **Windows (PowerShell) — sans cloner le repo :**
 ```powershell
-irm https://raw.githubusercontent.com/bpodwinski/ai-core/main/install.ps1 | iex
+[Net.ServicePointManager]::SecurityProtocol=3072; $f="$env:TEMP\install.ps1"; (New-Object Net.WebClient).DownloadFile('https://github.com/bpodwinski/ai-core/releases/latest/download/install.ps1',$f); &$f
 ```
 
 **Windows (PowerShell) — depuis le repo cloné :**
