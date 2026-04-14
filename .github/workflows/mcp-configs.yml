@@ -25,18 +25,22 @@ jobs:
       - name: Generate MCP configs
         run: node mcp/generate-configs.mjs
 
-      - name: Package Claude hooks
-        run: zip -r dist/claude-hooks.zip .claude/hooks/ .claude/settings.json
+      - name: Package all configs
+        run: |
+          mkdir -p staging/.claude/hooks
+          cp dist/claude-mcp.json   staging/.mcp.json
+          cp dist/codex-config.toml staging/codex-config.toml
+          cp .claude/settings.json  staging/.claude/settings.json
+          cp .claude/hooks/rust-check.py staging/.claude/hooks/rust-check.py
+          cd staging && zip -r ../dist/claude-config.zip .
 
       - name: Publish versioned GitHub Release
         run: |
           TAG="mcp-configs-$(date -u +%Y%m%d)-${{ github.run_number }}"
           gh release create "$TAG" \
             --title "MCP Configs ${TAG#mcp-configs-}" \
-            --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`." \
+            --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`.\n\nExtraire \`claude-config.zip\` à la racine du projet pour tout installer." \
             --latest \
-            dist/claude-mcp.json \
-            dist/codex-config.toml \
-            dist/claude-hooks.zip
+            dist/claude-config.zip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
