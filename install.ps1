@@ -9,6 +9,8 @@ param(
     [string]$ProjectDir = $PWD
 )
 $ErrorActionPreference = 'Stop'
+# GitHub requires TLS 1.2 — PowerShell 5.x defaults to TLS 1.0
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $Repo       = "bpodwinski/ai-core"
 $GhMcpRepo  = "github/github-mcp-server"
