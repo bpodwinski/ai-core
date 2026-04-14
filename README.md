@@ -1,6 +1,6 @@
 # ai-core
 
-Infrastructure Docker personnelle : n8n, Qdrant, serveurs MCP self-hosted.
+Infrastructure Docker personnelle : serveurs MCP self-hosted.
 
 ## MCP Servers
 
