@@ -1,0 +1,19 @@
+[package]
+name = "mcp-build"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "mcp-build"
+path = "src/main.rs"
+
+[dependencies]
+mcp-common = { path = "../mcp-common" }
+anyhow = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+walkdir = "2"
+fs_extra = "1"

@@ -1,0 +1,16 @@
+[package]
+name = "mcp-configgen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "mcp-configgen"
+path = "src/main.rs"
+
+[dependencies]
+mcp-common = { path = "../mcp-common" }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
+anyhow = { workspace = true }
+clap = { workspace = true }

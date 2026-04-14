@@ -28,9 +28,10 @@ bash install.sh
 
 This installs:
 - `.mcp.json` → project root
-- `.claude/settings.json` + `.claude/hooks/` → project root
+- `.claude/settings.json` → project root
 - `~/.codex/config.toml` → Codex CLI user config
-- `~/.claude/bin/github-mcp-server.exe` → GitHub MCP binary (no Docker needed)
+- `~/.claude/bin/github-mcp-server[.exe]` → GitHub MCP binary (no Docker needed)
+- `~/.claude/bin/mcp-hooks[.exe]` → Claude Code hooks (cargo fmt/clippy + AGENTS.md sync)
 
 If the user asks to "install the config" or "set up Claude config", run the appropriate script.
 
@@ -82,7 +83,7 @@ Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → m
 | `leptos-use` | `github.com/synphonyte/leptos-use` |
 | `rust` | `github.com/rust-lang/book` |
 | `daisyui` | `https://daisyui.com/llms.txt` |
-| `induflow` | Local docs in `mcp/servers/rust-docs/induflow/` |
+| `induflow` | Local docs in `mcp/crates/mcp-server/local-docs/induflow/` |
 | `tailwindcss` | `github.com/tailwindlabs/tailwindcss.com` + catalog généré |
 
 ### MCP Commands
@@ -104,7 +105,7 @@ just logs         # View logs
 **Never edit `.mcp.json` directly.** It is generated from `mcp/servers-manifest.json`.
 
 ```bash
-node mcp/generate-configs.mjs   # génère dist/claude-mcp.json
+cd mcp && cargo run -p mcp-configgen   # génère ../dist/claude-mcp.json
 cp dist/claude-mcp.json .mcp.json
 ```
 
@@ -121,7 +122,7 @@ Add an entry in `mcp/servers-manifest.json` → `"external"`:
 }
 ```
 
-Then regenerate: `node mcp/generate-configs.mjs && cp dist/claude-mcp.json .mcp.json`
+Then regenerate: `cd mcp && cargo run -p mcp-configgen && cp ../dist/claude-mcp.json ../.mcp.json`
 
 ### Adding a stdio MCP server (npx / local process)
 
@@ -136,7 +137,7 @@ Add an entry in `mcp/servers-manifest.json` → `"stdio"`:
 }
 ```
 
-Then regenerate: `node mcp/generate-configs.mjs && cp dist/claude-mcp.json .mcp.json`
+Then regenerate: `cd mcp && cargo run -p mcp-configgen && cp ../dist/claude-mcp.json ../.mcp.json`
 
 ### Rust crate analysis tools (rust-docs-mcp)
 
@@ -198,11 +199,11 @@ The build is driven by `mcp/servers-manifest.json`. Adding a new doc source requ
 { "name": "<name>", "description": "...", "source": { "type": "local", "path": "<name>/" } }
 ```
 
-For local docs, place `.md` files in `mcp/servers/rust-docs/local-docs/<name>/`.
+For local docs, place `.md` files in `mcp/crates/mcp-server/local-docs/<name>/`.
 
 **2. Available transforms** (optional, applied in order):
-- `strip-mdx` — convert `.mdx` → `.md` via remark AST
-- `generate-catalog` — generate Tailwind CSS class catalog
+- `strip-mdx` — strip MDX (imports/exports, `{expressions}`, unwrap JSX) → `.md`
+- `generate-catalog` — generate Tailwind CSS class catalog (embedded in `mcp-build`)
 - `split` — split single file into per-heading `.md` files
 
 **3. If the source has an OpenAPI spec (JSON/YAML):**

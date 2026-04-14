@@ -1,0 +1,138 @@
+use anyhow::{bail, Context, Result};
+use mcp_common::{DocSource, Manifest, Transform};
+use std::path::Path;
+use std::process::Command;
+
+pub fn run(manifest: &Path, docs_dir: &Path, local_docs: &Path, tmp: &Path) -> Result<()> {
+    let manifest = Manifest::load(manifest)?;
+
+    std::fs::create_dir_all(docs_dir)
+        .with_context(|| format!("creating {}", docs_dir.display()))?;
+    std::fs::create_dir_all(tmp).with_context(|| format!("creating {}", tmp.display()))?;
+
+    let mut total = 0usize;
+    for entry in &manifest.doc_sources {
+        let Some(src) = &entry.source else {
+            println!("-- {}: no source defined, skipping", entry.name);
+            continue;
+        };
+
+        let out_dir = docs_dir.join(&entry.name);
+        println!(
+            "\n=> {} ({})",
+            entry.name,
+            match src {
+                DocSource::Git { .. } => "git",
+                DocSource::Url { .. } => "url",
+                DocSource::Local { .. } => "local",
+            }
+        );
+
+        match src {
+            DocSource::Git { url, docs_path, .. } => {
+                let clone_dir = tmp.join(&entry.name);
+                if clone_dir.exists() {
+                    fs_extra::dir::remove(&clone_dir).ok();
+                }
+                run_cmd(
+                    Command::new("git")
+                        .args(["clone", "--depth", "1", url])
+                        .arg(&clone_dir),
+                )?;
+                let src_dir = clone_dir.join(docs_path);
+                if out_dir.exists() {
+                    fs_extra::dir::remove(&out_dir).ok();
+                }
+                copy_dir(&src_dir, &out_dir)?;
+            }
+            DocSource::Url { url, transforms } => {
+                std::fs::create_dir_all(&out_dir)?;
+                let tmp_file = tmp.join(format!("{}.md", entry.name));
+                download_url(url, &tmp_file)?;
+                if transforms.is_empty() {
+                    std::fs::copy(&tmp_file, out_dir.join(format!("{}.md", entry.name)))?;
+                }
+            }
+            DocSource::Local { path, .. } => {
+                let local_path = local_docs.join(path);
+                if !local_path.exists() {
+                    bail!("Local docs not found: {}", local_path.display());
+                }
+                if out_dir.exists() {
+                    fs_extra::dir::remove(&out_dir).ok();
+                }
+                copy_dir(&local_path, &out_dir)?;
+            }
+        }
+
+        // Apply transforms
+        for transform in src.transforms() {
+            println!("   transform: {}", transform_name(*transform));
+            match transform {
+                Transform::StripMdx => {
+                    crate::mdx::strip_dir(&out_dir)?;
+                }
+                Transform::GenerateCatalog => {
+                    crate::catalog::write_catalog(&out_dir.join("catalog.md"))?;
+                }
+                Transform::Split => {
+                    let tmp_file = tmp.join(format!("{}.md", entry.name));
+                    crate::split::run(&tmp_file, &out_dir)?;
+                }
+            }
+        }
+
+        total += 1;
+        println!("   OK {}", entry.name);
+    }
+
+    println!(
+        "\nDone: {} doc sources fetched to {}",
+        total,
+        docs_dir.display()
+    );
+    Ok(())
+}
+
+fn transform_name(t: Transform) -> &'static str {
+    match t {
+        Transform::StripMdx => "strip-mdx",
+        Transform::GenerateCatalog => "generate-catalog",
+        Transform::Split => "split",
+    }
+}
+
+fn run_cmd(cmd: &mut Command) -> Result<()> {
+    let status = cmd
+        .status()
+        .with_context(|| format!("spawning {:?}", cmd))?;
+    if !status.success() {
+        bail!("{:?} failed with status {:?}", cmd, status);
+    }
+    Ok(())
+}
+
+fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
+    let mut opts = fs_extra::dir::CopyOptions::new();
+    opts.copy_inside = true;
+    opts.content_only = true;
+    opts.overwrite = true;
+    std::fs::create_dir_all(dst)?;
+    fs_extra::dir::copy(src, dst, &opts)
+        .with_context(|| format!("copying {} → {}", src.display(), dst.display()))?;
+    Ok(())
+}
+
+fn download_url(url: &str, out: &Path) -> Result<()> {
+    let body = reqwest::blocking::get(url)
+        .with_context(|| format!("GET {}", url))?
+        .error_for_status()?
+        .bytes()?;
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let path_ref: &Path = out;
+    let _ = path_ref;
+    std::fs::write(out, &body).with_context(|| format!("writing {}", out.display()))?;
+    Ok(())
+}

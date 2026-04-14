@@ -27,7 +27,7 @@ curl -fsSL "$ZIP_URL" -o "$ZIP"
 
 echo "Installing project configs → $PROJECT_DIR"
 unzip -o "$ZIP" ".mcp.json" -d "$PROJECT_DIR"
-unzip -o "$ZIP" ".claude/*" -d "$PROJECT_DIR"
+unzip -o "$ZIP" ".claude/settings.json" -d "$PROJECT_DIR"
 
 echo "Installing Codex config → ~/.codex/config.toml"
 mkdir -p "$HOME/.codex"
@@ -79,6 +79,23 @@ else
 fi
 
 echo "github-mcp-server installed → $BIN_DIR"
+
+# ── 3. mcp-hooks binary (Claude Code hooks for cargo fmt/clippy + AGENTS.md sync) ─
+echo ""
+echo "Installing mcp-hooks..."
+case "$OS" in
+  Linux)  MCP_HOOKS_ASSET="mcp-hooks-linux-x86_64"  ;;
+  Darwin) MCP_HOOKS_ASSET="mcp-hooks-macos-arm64"   ;;
+  MINGW*|MSYS*|CYGWIN*) MCP_HOOKS_ASSET="mcp-hooks-windows-x86_64.exe" ;;
+esac
+MCP_HOOKS_URL="https://github.com/${REPO}/releases/latest/download/${MCP_HOOKS_ASSET}"
+case "$OS" in
+  MINGW*|MSYS*|CYGWIN*) MCP_HOOKS_DEST="$BIN_DIR/mcp-hooks.exe" ;;
+  *) MCP_HOOKS_DEST="$BIN_DIR/mcp-hooks" ;;
+esac
+curl -fsSL "$MCP_HOOKS_URL" -o "$MCP_HOOKS_DEST"
+chmod +x "$MCP_HOOKS_DEST" 2>/dev/null || true
+echo "mcp-hooks installed → $MCP_HOOKS_DEST"
 
 rm -rf "$TMP"
 echo ""

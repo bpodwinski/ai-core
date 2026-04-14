@@ -38,7 +38,7 @@ services:
   mcp-docs:
     build:
       context: .
-      dockerfile: servers/rust-docs/Dockerfile
+      dockerfile: crates/mcp-server/Dockerfile
     image: mcp-rust-docs:local
     container_name: mcp-docs
     restart: unless-stopped

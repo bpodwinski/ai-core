@@ -43,20 +43,24 @@ Un seul container `mcp-docs` sert toutes les sources de documentation **et** les
 | `justfile` | Tâches build/deploy (Just task runner) |
 | `docker-compose.yml` | Orchestration des 3 services |
 | `servers-manifest.json` | Source de vérité : doc sources, types, transforms, configs clients |
-| `generate-configs.mjs` | Génère `dist/claude-mcp.json` et `dist/codex-config.toml` |
+| `Cargo.toml` | Workspace Cargo (5 crates : mcp-common, mcp-server, mcp-build, mcp-configgen, mcp-hooks) |
+| `crates/mcp-common/` | Types serde partagés (Manifest, DocSource, Transform, …) |
+| `crates/mcp-server/` | Runtime MCP — docs loader + OAuth 2.1 PKCE (binaire `mcp-rust-docs`) |
+| `crates/mcp-server/src/main.rs` | Entry point Rust — chargement docs, OAuth, health check enrichi |
+| `crates/mcp-server/src/oauth.rs` | OAuth 2.1 PKCE (RFC 8414/7591/9728), axum |
+| `crates/mcp-server/src/views/authorize.html` | Page de consentement (chargée via `include_str!`) |
+| `crates/mcp-server/src/tools.rs` | 3 outils MCP : search_docs, get_doc, list_topics |
+| `crates/mcp-server/Dockerfile` | Build multi-stage Rust pur (pas de stage Node) |
+| `crates/mcp-server/local-docs/` | Docs locales (induflow/, etc.) |
+| `crates/mcp-build/` | Outillage build-time (binaire `mcp-build` : fetch-docs, strip-mdx, generate-catalog, split) |
+| `crates/mcp-configgen/` | Génère `dist/claude-mcp.json` et `dist/codex-config.toml` depuis le manifest |
+| `crates/mcp-hooks/` | Hooks Claude Code (rust-check : cargo fmt + clippy ; sync-skill : CLAUDE.md → AGENTS.md) |
 | `deploy.ps1` | Déploiement SSH → serveur distant |
-| `.dockerignore` | Exclut target/, node_modules/, configs du build context |
+| `.dockerignore` | Exclut target/, configs du build context |
 | `nginx/mcp.conf.template` | Config nginx : auth, rate-limit, proxy vers mcp-docs |
 | `cloudflared/config.yml` | Tunnel Cloudflare → nginx:80 |
-| `servers/rust-docs/src/main.rs` | Entry point Rust — chargement docs, OAuth, health check enrichi |
-| `servers/rust-docs/src/oauth.rs` | OAuth 2.1 PKCE (RFC 8414/7591/9728), axum |
-| `servers/rust-docs/src/views/authorize.html` | Page de consentement (chargée via `include_str!`) |
-| `servers/rust-docs/src/tools.rs` | 3 outils MCP : search_docs, get_doc, list_topics |
-| `servers/rust-docs/Dockerfile` | Build multi-stage : Rust + docs (config-driven via manifest) |
-| `servers/rust-docs/fetch-docs.mjs` | Lit le manifest, fetch & transforme toutes les docs |
-| `servers/rust-docs/local-docs/` | Docs locales (induflow/, etc.) |
 
-## Serveur Rust (servers/rust-docs/)
+## Serveur Rust (crates/mcp-server/)
 
 Binaire unique compilé en Rust avec `rmcp`. Charge toutes les docs depuis `DOCS_PATH` une seule fois au démarrage, partage en mémoire via `Arc` entre les sessions.
 
@@ -73,7 +77,7 @@ Binaire unique compilé en Rust avec `rmcp`. Charge toutes les docs depuis `DOCS
 - `POST /mcp` — transport Streamable HTTP (SSE)
 - `GET /health` — healthcheck enrichi (status, docs_loaded, categories)
 
-## Serveur OAuth (servers/rust-docs/src/oauth.rs)
+## Serveur OAuth (crates/mcp-server/src/oauth.rs)
 
 OAuth 2.1 PKCE minimaliste, intégré au binaire `mcp-rust-docs` (axum). Tokens d'1h, Bearer = `MCP_API_KEY`.  
 Pas de BDD — codes d'autorisation en mémoire. Redémarrer = invalider les flows en cours.
@@ -110,8 +114,8 @@ SSH_KEY=~/.ssh/mcp_deploy
 **Ne jamais éditer `.mcp.json` directement.** Il est généré depuis `servers-manifest.json`.
 
 ```bash
-node generate-configs.mjs        # génère dist/claude-mcp.json + codex-config.toml
-cp dist/claude-mcp.json ../.mcp.json
+cargo run -p mcp-configgen        # génère ../dist/claude-mcp.json + codex-config.toml
+cp ../dist/claude-mcp.json ../.mcp.json
 ```
 
 ### Ajouter un serveur MCP HTTP externe
@@ -140,7 +144,7 @@ Ajouter dans `servers-manifest.json` → `"stdio"` :
 }
 ```
 
-Puis régénérer : `node generate-configs.mjs && cp dist/claude-mcp.json ../.mcp.json`
+Puis régénérer : `cargo run -p mcp-configgen && cp ../dist/claude-mcp.json ../.mcp.json`
 
 ---
 
@@ -203,11 +207,11 @@ Le build est piloté par `servers-manifest.json`. Ajouter une doc source = **mod
 { "name": "<name>", "description": "...", "source": { "type": "local", "path": "<name>/" } }
 ```
 
-Pour les docs locales, placer les `.md` dans `servers/rust-docs/local-docs/<name>/`.
+Pour les docs locales, placer les `.md` dans `crates/mcp-server/local-docs/<name>/`.
 
 **2. Transforms disponibles** (optionnels, appliqués dans l'ordre) :
-- `strip-mdx` — convertit `.mdx` → `.md` via remark AST
-- `generate-catalog` — génère le catalog des classes Tailwind CSS
+- `strip-mdx` — strip MDX (imports/exports, `{expressions}`, unwrap JSX) → `.md`
+- `generate-catalog` — génère le catalog des classes Tailwind CSS (embarqué dans `mcp-build`)
 - `split` — découpe un fichier unique en un `.md` par heading
 
 **3. Si la source est une spec OpenAPI (JSON/YAML) :** convertir en Markdown, supprimer les fichiers JSON/YAML/SVG — le serveur ne charge que les `.md`.
@@ -219,13 +223,13 @@ just ship
 docker compose logs mcp-docs | grep "categories"
 ```
 
-Le `fetch-docs.mjs` lit le manifest et orchestre le fetch/transform automatiquement. Le serveur détecte les nouveaux sous-dossiers dans `/docs/` comme catégories.
+Le binaire `mcp-build fetch-docs` (invoqué depuis le Dockerfile) lit le manifest et orchestre le fetch/transform automatiquement. Le serveur détecte les nouveaux sous-dossiers dans `/docs/` comme catégories.
 
 ## Génération des configs clients
 
 ```bash
-node generate-configs.mjs
-# Produit : dist/claude-mcp.json et dist/codex-config.toml
+cargo run -p mcp-configgen
+# Produit : ../dist/claude-mcp.json et ../dist/codex-config.toml
 ```
 
 Ces fichiers sont publiés comme assets de release GitHub.

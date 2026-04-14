@@ -8,9 +8,9 @@ cloudflared/
 nginx/
 *.md
 !servers-manifest.json
+!crates/mcp-server/local-docs/**/*.md
+!crates/mcp-build/src/*.md
 
-# Rust build artifacts (594MB)
-servers/rust-docs/target/
-
-# Node modules (rebuilt in Docker)
-servers/rust-docs/node_modules/
+# Rust build artifacts
+target/
+crates/*/target/

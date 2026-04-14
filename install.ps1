@@ -33,12 +33,6 @@ $ClaudeDir = "$HOME\.claude"
 if (-not (Test-Path $ClaudeDir)) { New-Item -ItemType Directory -Path $ClaudeDir | Out-Null }
 # settings.json
 Copy-Item "$Tmp\.claude\settings.json" -Destination "$ClaudeDir\settings.json" -Force
-# hooks/
-if (Test-Path "$Tmp\.claude\hooks") {
-    $HooksDir = "$ClaudeDir\hooks"
-    if (-not (Test-Path $HooksDir)) { New-Item -ItemType Directory -Path $HooksDir | Out-Null }
-    Copy-Item "$Tmp\.claude\hooks\*" -Destination $HooksDir -Force
-}
 
 Write-Host "Installing Codex config -> $HOME\.codex\config.toml"
 $CodexDir = "$HOME\.codex"
@@ -69,6 +63,14 @@ $entry = $z.Entries | Where-Object { $_.Name -eq "github-mcp-server.exe" }
 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$BinDir\github-mcp-server.exe", $true)
 $z.Dispose()
 Write-Host "github-mcp-server installed -> $BinDir"
+
+# ── 3b. mcp-hooks binary (Claude Code hooks for cargo fmt/clippy + AGENTS.md sync) ─
+Write-Host ""
+Write-Host "Installing mcp-hooks..."
+$McpHooksAsset = "mcp-hooks-windows-x86_64.exe"
+$McpHooksUrl   = "https://github.com/$Repo/releases/latest/download/$McpHooksAsset"
+(New-Object Net.WebClient).DownloadFile($McpHooksUrl, "$BinDir\mcp-hooks.exe")
+Write-Host "mcp-hooks installed -> $BinDir\mcp-hooks.exe"
 
 # ── 4. Project-level install (.mcp.json) — only if -ProjectDir is given ───────
 if ($ProjectDir -ne "") {

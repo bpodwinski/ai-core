@@ -19,8 +19,7 @@ jobs:
           rsync -az --delete \
             --exclude='.env' \
             --exclude='.env.*' \
-            --exclude='node_modules/' \
-            --exclude='servers/rust-docs/target/' \
+            --exclude='target/' \
             mcp/ \
             "${{ secrets.DEPLOY_PATH }}/"
 

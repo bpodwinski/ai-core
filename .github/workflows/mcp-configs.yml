@@ -5,51 +5,99 @@ on:
     branches: [main]
     paths:
       - "mcp/servers-manifest.json"
-      - "mcp/generate-configs.mjs"
+      - "mcp/crates/**"
+      - "mcp/Cargo.toml"
+      - "mcp/Cargo.lock"
       - "install.ps1"
       - "install.sh"
       - ".claude/settings.json"
-      - ".claude/hooks/**"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  generate:
-    runs-on: ubuntu-latest
-
+  build-hooks:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: mcp-hooks-linux-x86_64
+            binary: mcp-hooks
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset: mcp-hooks-macos-arm64
+            binary: mcp-hooks
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: mcp-hooks-windows-x86_64.exe
+            binary: mcp-hooks.exe
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
-      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+      - name: Install Rust
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build mcp-hooks
+        working-directory: mcp
+        run: cargo build --release --target ${{ matrix.target }} -p mcp-hooks
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
         with:
-          node-version: "24"
+          name: ${{ matrix.asset }}
+          path: mcp/target/${{ matrix.target }}/release/${{ matrix.binary }}
+
+  generate:
+    runs-on: ubuntu-latest
+    needs: build-hooks
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Build mcp-configgen
+        working-directory: mcp
+        run: cargo build --release -p mcp-configgen
 
       - name: Generate MCP configs
-        run: node mcp/generate-configs.mjs
+        working-directory: mcp
+        run: ./target/release/mcp-configgen --out-dir ../dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: hook-binaries
 
       - name: Package all configs
         run: |
-          mkdir -p staging/.claude/hooks staging/.codex
+          mkdir -p staging/.claude staging/.codex
           cp dist/claude-mcp.json        staging/.mcp.json
           cp dist/codex-config.toml      staging/.codex/config.toml
           cp .claude/settings.json       staging/.claude/settings.json
-          cp .claude/hooks/rust-check.py staging/.claude/hooks/rust-check.py
           cp install.sh                  staging/install.sh
           cp install.ps1                 staging/install.ps1
           cd staging && zip -r ../dist/claude-config.zip .
+          cd ..
+          # Stage hook binaries for release upload
+          cp hook-binaries/mcp-hooks-linux-x86_64/mcp-hooks           dist/mcp-hooks-linux-x86_64
+          cp hook-binaries/mcp-hooks-macos-arm64/mcp-hooks            dist/mcp-hooks-macos-arm64
+          cp hook-binaries/mcp-hooks-windows-x86_64.exe/mcp-hooks.exe dist/mcp-hooks-windows-x86_64.exe
+          chmod +x dist/mcp-hooks-linux-x86_64 dist/mcp-hooks-macos-arm64
           # Also publish install.ps1 as a standalone asset for irm | iex usage
-          cp ../install.ps1 ../dist/install.ps1
+          cp install.ps1 dist/install.ps1
 
       - name: Publish versioned GitHub Release
         run: |
           TAG="mcp-configs-$(date -u +%Y%m%d)-${{ github.run_number }}"
           gh release create "$TAG" \
             --title "MCP Configs ${TAG#mcp-configs-}" \
-            --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`.\n\nExtraire \`claude-config.zip\` à la racine du projet pour tout installer." \
+            --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`.\n\nExtraire \`claude-config.zip\` à la racine du projet pour les configs, puis lancer \`install.sh\` / \`install.ps1\` pour installer le binaire \`mcp-hooks\`." \
             --latest \
             dist/claude-config.zip \
-            dist/install.ps1
+            dist/install.ps1 \
+            dist/mcp-hooks-linux-x86_64 \
+            dist/mcp-hooks-macos-arm64 \
+            dist/mcp-hooks-windows-x86_64.exe
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

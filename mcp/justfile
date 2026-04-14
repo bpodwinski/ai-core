@@ -1,14 +1,12 @@
 set windows-shell := ["powershell", "-NoProfile", "-Command"]
 
-rust-docs := "servers/rust-docs"
-
-# Build the Rust binary locally
+# Build all release binaries in the workspace
 build:
-    Set-Location {{rust-docs}}; cargo build --release
+    cargo build --release
 
-# Check compilation without producing a binary
+# Check compilation without producing binaries
 check:
-    Set-Location {{rust-docs}}; cargo check
+    cargo check
 
 # Build Docker image (single multi-tenant docs server)
 docker-build:

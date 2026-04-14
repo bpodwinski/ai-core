@@ -1,17 +1,31 @@
-# ── Stage 1 : Build mcp-rust-docs (musl = static binary, no GLIBC dependency) ─
+# ── Stage 1 : Build mcp-server (musl = static binary, no GLIBC dependency) ─
 # Build context is mcp/ (parent directory)
 FROM rust:1.94-slim AS rust-builder
 
-RUN apt-get update && apt-get install -y musl-tools && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y musl-tools pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /app
-COPY servers/rust-docs/Cargo.toml servers/rust-docs/Cargo.lock ./
-COPY servers/rust-docs/src/ src/
+COPY Cargo.toml Cargo.lock ./
+COPY crates/mcp-common/ crates/mcp-common/
+COPY crates/mcp-server/Cargo.toml crates/mcp-server/Cargo.toml
+COPY crates/mcp-server/src/ crates/mcp-server/src/
 
-RUN cargo build --release --target x86_64-unknown-linux-musl
+RUN cargo build --release --target x86_64-unknown-linux-musl -p mcp-server
 
-# ── Stage 2 : Build rust-docs-mcp (nightly via rustup) ───────────────────────
+# ── Stage 2 : Build mcp-build (docs fetcher + transforms, glibc is fine) ─────
+FROM rust:1.94-slim AS build-tools
+
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY crates/mcp-common/ crates/mcp-common/
+COPY crates/mcp-build/ crates/mcp-build/
+
+RUN cargo build --release -p mcp-build
+
+# ── Stage 3 : Build rust-docs-mcp (nightly via rustup) ───────────────────────
 FROM debian:bookworm-slim AS rdmcp-builder
 
 RUN apt-get update && apt-get install -y curl pkg-config libssl-dev git ca-certificates \
@@ -25,31 +39,21 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Branch: feat/cache-crate-specific-features (not yet merged to main)
 RUN cargo install --git https://github.com/bpodwinski/rust-docs-mcp.git --branch feat/cache-crate-specific-features rust-docs-mcp
 
-# ── Stage 3 : Fetch & process docs (config-driven from manifest) ──────────────
-FROM node:20-slim AS docs-builder
+# ── Stage 4 : Fetch & process docs using the mcp-build binary ────────────────
+FROM debian:bookworm-slim AS docs-builder
 
-RUN apt-get update && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
+COPY --from=build-tools /app/target/release/mcp-build /usr/local/bin/mcp-build
 
-# npm deps (cached layer)
-COPY servers/rust-docs/package.json ./
-RUN npm install --silent
-
-# Manifest (source of truth) + processing scripts
+# Manifest (source of truth) + local docs referenced by type:"local" entries
 COPY servers-manifest.json ./
-COPY servers/rust-docs/fetch-docs.mjs ./
-COPY servers/rust-docs/strip-mdx.mjs ./
-COPY servers/rust-docs/generate-catalog.mjs ./
-COPY servers/rust-docs/split-daisyui.mjs ./
+COPY crates/mcp-server/local-docs/ /local-docs/
 
-# Local docs (referenced by type:"local" entries in manifest)
-COPY servers/rust-docs/local-docs/ /local-docs/
+RUN mcp-build fetch-docs --manifest servers-manifest.json --docs-dir /docs --local-docs /local-docs --tmp /tmp/fetch
 
-# Fetch all doc sources defined in the manifest
-RUN node fetch-docs.mjs
-
-# ── Stage 4 : Runtime (nightly required for rustdoc JSON generation) ──────────
+# ── Stage 5 : Runtime (nightly required for rustdoc JSON generation) ─────────
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y ca-certificates wget git curl build-essential pkg-config libssl-dev libclang-dev python3 \
@@ -62,7 +66,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install the specific nightly version required by rust-docs-mcp (rustdoc-types 0.53 = format v53)
 RUN rustup toolchain install nightly-2025-06-24 --profile minimal
 
-COPY --from=rust-builder  /app/target/x86_64-unknown-linux-musl/release/mcp-rust-docs  /usr/local/bin/
+COPY --from=rust-builder  /app/target/x86_64-unknown-linux-musl/release/mcp-rust-docs  /usr/local/bin/mcp-rust-docs
 COPY --from=rdmcp-builder /root/.cargo/bin/rust-docs-mcp           /usr/local/bin/
 COPY --from=docs-builder  /docs/                                    /docs/
 
