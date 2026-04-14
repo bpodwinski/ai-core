@@ -51,6 +51,8 @@ if ($rsyncCmd) {
         --exclude='deploy.ps1' `
         --exclude='deploy-remote.sh' `
         --exclude='tests/' `
+        --exclude='crates/mcp-configgen/src/' `
+        --exclude='crates/mcp-hooks/src/' `
         -e $sshTransport `
         "$scriptDir/" `
         $rsyncDest
@@ -61,15 +63,17 @@ if ($rsyncCmd) {
     # Fallback SCP — copie fichier par fichier
     Write-Host "==> Syncing (scp) to $remoteTarget ..."
 
-    $excludeDirs  = @('.git', 'node_modules', 'target', 'dist', 'tests')
-    $excludeFiles = @('.env', '.env.deploy', '.env.deploy.example', 'AGENTS.md', 'CLAUDE.md', 'justfile', 'deploy.ps1', 'deploy-remote.sh')
+    $excludeDirs     = @('.git', 'node_modules', 'target', 'dist', 'tests')
+    $excludeFiles    = @('.env', '.env.deploy', '.env.deploy.example', 'AGENTS.md', 'CLAUDE.md', 'justfile', 'deploy.ps1', 'deploy-remote.sh')
+    $excludeRelPaths = @('crates\mcp-configgen\src', 'crates\mcp-hooks\src')
 
     $items = Get-ChildItem -Path $scriptDir -Recurse -File | Where-Object {
         $rel   = $_.FullName.Substring($scriptDir.Length + 1)
         $parts = $rel.Split('\')
-        $inExcludedDir  = $parts | Where-Object { $excludeDirs -contains $_ }
-        $isExcludedFile = $excludeFiles -contains $_.Name
-        (-not $inExcludedDir) -and (-not $isExcludedFile)
+        $inExcludedDir     = $parts | Where-Object { $excludeDirs -contains $_ }
+        $isExcludedFile    = $excludeFiles -contains $_.Name
+        $inExcludedRelPath = $excludeRelPaths | Where-Object { $rel.StartsWith($_) }
+        (-not $inExcludedDir) -and (-not $isExcludedFile) -and (-not $inExcludedRelPath)
     }
 
     foreach ($item in $items) {
