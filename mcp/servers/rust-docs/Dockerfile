@@ -22,8 +22,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Fork with --features support for crates with mutually exclusive features
-# See: D:\Dev\rust-docs-mcp (local fork of snowmead/rust-docs-mcp)
-RUN cargo install --git https://github.com/bpodwinski/rust-docs-mcp.git rust-docs-mcp
+# Branch: feat/cache-crate-specific-features (not yet merged to main)
+RUN cargo install --git https://github.com/bpodwinski/rust-docs-mcp.git --branch feat/cache-crate-specific-features rust-docs-mcp
 
 # ── Stage 3 : Fetch & process docs (config-driven from manifest) ──────────────
 FROM node:20-slim AS docs-builder
