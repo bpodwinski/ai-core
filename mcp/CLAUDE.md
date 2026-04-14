@@ -32,25 +32,25 @@ Claude Code → HTTPS → Cloudflare Tunnel → nginx (auth_request OAuth) → m
 |---------|-------|------|
 | `cf-tunnel` | cloudflare/cloudflared | Expose nginx publiquement |
 | `nginx` | nginx:alpine | Reverse proxy + rate limiting + auth |
-| `oauth` | build: ./oauth/ | Serveur OAuth 2.1 PKCE (Node.js) |
-| `mcp-docs` | mcp-rust-docs:local | Serveur multi-tenant — toutes les docs |
+| `mcp-docs` | mcp-rust-docs:local | Serveur multi-tenant — docs + OAuth 2.1 PKCE |
 
-Un seul container `mcp-docs` sert toutes les sources de documentation. Les docs sont chargées une seule fois au démarrage depuis `/docs/` et partagées entre toutes les sessions via `Arc`. Chaque sous-dossier de `/docs/` devient une catégorie (`leptos`, `rust`, `daisyui`, etc.).
+Un seul container `mcp-docs` sert toutes les sources de documentation **et** les endpoints OAuth (discovery, authorize, token, validate). Les docs sont chargées une seule fois au démarrage depuis `/docs/` et partagées entre toutes les sessions via `Arc`. Chaque sous-dossier de `/docs/` devient une catégorie (`leptos`, `rust`, `daisyui`, etc.).
 
 ## Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
 | `justfile` | Tâches build/deploy (Just task runner) |
-| `docker-compose.yml` | Orchestration des 4 services |
+| `docker-compose.yml` | Orchestration des 3 services |
 | `servers-manifest.json` | Source de vérité : doc sources, types, transforms, configs clients |
 | `generate-configs.mjs` | Génère `dist/claude-mcp.json` et `dist/codex-config.toml` |
 | `deploy.ps1` | Déploiement SSH → serveur distant |
 | `.dockerignore` | Exclut target/, node_modules/, configs du build context |
 | `nginx/mcp.conf.template` | Config nginx : auth, rate-limit, proxy vers mcp-docs |
 | `cloudflared/config.yml` | Tunnel Cloudflare → nginx:80 |
-| `oauth/server.js` | OAuth 2.0 PKCE (RFC 8414/7591/9728), Express.js |
-| `servers/rust-docs/src/main.rs` | Entry point Rust — chargement docs, health check enrichi |
+| `servers/rust-docs/src/main.rs` | Entry point Rust — chargement docs, OAuth, health check enrichi |
+| `servers/rust-docs/src/oauth.rs` | OAuth 2.1 PKCE (RFC 8414/7591/9728), axum |
+| `servers/rust-docs/src/views/authorize.html` | Page de consentement (chargée via `include_str!`) |
 | `servers/rust-docs/src/tools.rs` | 3 outils MCP : search_docs, get_doc, list_topics |
 | `servers/rust-docs/Dockerfile` | Build multi-stage : Rust + docs (config-driven via manifest) |
 | `servers/rust-docs/fetch-docs.mjs` | Lit le manifest, fetch & transforme toutes les docs |
@@ -73,10 +73,10 @@ Binaire unique compilé en Rust avec `rmcp`. Charge toutes les docs depuis `DOCS
 - `POST /mcp` — transport Streamable HTTP (SSE)
 - `GET /health` — healthcheck enrichi (status, docs_loaded, categories)
 
-## Serveur OAuth (oauth/server.js)
+## Serveur OAuth (servers/rust-docs/src/oauth.rs)
 
-OAuth 2.1 PKCE minimaliste. Tokens longue durée (1 an) depuis `MCP_API_KEY`.  
-Pas de BDD — tout en mémoire. Redémarrer = invalider les sessions en cours.
+OAuth 2.1 PKCE minimaliste, intégré au binaire `mcp-rust-docs` (axum). Tokens d'1h, Bearer = `MCP_API_KEY`.  
+Pas de BDD — codes d'autorisation en mémoire. Redémarrer = invalider les flows en cours.
 
 **Endpoints :**
 - `GET /.well-known/oauth-authorization-server` — métadonnées RFC 8414

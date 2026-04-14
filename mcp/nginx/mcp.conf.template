@@ -26,19 +26,19 @@ server {
     # OAuth discovery + endpoints (pas d'auth, rate limit dédié)
     location /.well-known/ {
         limit_req zone=oauth_limit burst=10 nodelay;
-        proxy_pass http://oauth:8080;
+        proxy_pass http://mcp-docs:80;
     }
 
     location /oauth/ {
         limit_req zone=oauth_limit burst=10 nodelay;
         add_header Content-Security-Policy "default-src 'self'" always;
-        proxy_pass http://oauth:8080;
+        proxy_pass http://mcp-docs:80;
     }
 
     # Validation interne du Bearer token (nginx auth_request)
     location = /auth-check {
         internal;
-        proxy_pass              http://oauth:8080/oauth/validate;
+        proxy_pass              http://mcp-docs:80/oauth/validate;
         proxy_pass_request_body off;
         proxy_set_header        Content-Length "";
         proxy_set_header        Authorization $http_authorization;

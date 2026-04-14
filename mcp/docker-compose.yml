@@ -23,8 +23,6 @@ services:
     volumes:
       - ./nginx/mcp.conf.template:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      oauth:
-        condition: service_healthy
       mcp-docs:
         condition: service_healthy
     healthcheck:
@@ -34,25 +32,9 @@ services:
       retries: 3
       start_period: 10s
 
-  oauth:
-    build: ./oauth/
-    container_name: mcp-oauth
-    restart: unless-stopped
-    expose:
-      - "8080"
-    environment:
-      OAUTH_ISSUER: "${OAUTH_ISSUER}"
-      MCP_API_KEY: "${MCP_API_KEY}"
-      OAUTH_ALLOWED_ORIGINS: "${OAUTH_ALLOWED_ORIGINS:-}"
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/.well-known/oauth-authorization-server', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  # Single multi-tenant docs server — serves all doc sources via DOCS_PATH=/docs
-  # Also embeds rust-docs-mcp as a subprocess for on-demand crate analysis
+  # Single multi-tenant docs server — serves all doc sources via DOCS_PATH=/docs,
+  # OAuth 2.1 PKCE endpoints, and embeds rust-docs-mcp as a subprocess for
+  # on-demand crate analysis
   mcp-docs:
     build:
       context: .
@@ -66,6 +48,9 @@ services:
       DOCS_PATH: /docs
       RUST_DOCS_MCP_CACHE_DIR: /cache
       RUST_LOG: info
+      OAUTH_ISSUER: "${OAUTH_ISSUER}"
+      MCP_API_KEY: "${MCP_API_KEY}"
+      OAUTH_ALLOWED_ORIGINS: "${OAUTH_ALLOWED_ORIGINS:-}"
     volumes:
       - rust_docs_cache:/cache
     healthcheck:

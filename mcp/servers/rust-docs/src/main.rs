@@ -7,6 +7,7 @@ use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod crate_proxy;
+mod oauth;
 mod tools;
 use tools::DocServer;
 
@@ -43,6 +44,9 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    let oauth_state = oauth::OAuthState::from_env()?;
+    tracing::info!("OAuth endpoints mounted");
+
     let ct = CancellationToken::new();
 
     // Health check captures doc stats
@@ -75,6 +79,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }),
         )
+        .merge(oauth::router(oauth_state))
         .fallback_service(service);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await?;

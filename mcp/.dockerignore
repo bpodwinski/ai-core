@@ -5,7 +5,6 @@
 dist/
 *.ps1
 cloudflared/
-oauth/
 nginx/
 *.md
 !servers-manifest.json
