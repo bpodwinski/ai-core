@@ -65,6 +65,39 @@
       "options": { "cwd": "${workspaceFolder}/mcp" },
       "group": "build",
       "problemMatcher": "$rustc"
+    },
+    {
+      "label": "MCP: Ship No Cache (Build + Deploy)",
+      "type": "shell",
+      "command": "just ship-no-cache",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "build",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "MCP: Restart Service",
+      "type": "shell",
+      "command": "just restart ${input:service}",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Test",
+      "type": "shell",
+      "command": "just test",
+      "options": { "cwd": "${workspaceFolder}/mcp" },
+      "group": "test",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "service",
+      "type": "pickString",
+      "description": "Service à redémarrer",
+      "options": ["mcp-docs", "nginx", "cf-tunnel"],
+      "default": "mcp-docs"
     }
   ]
 }

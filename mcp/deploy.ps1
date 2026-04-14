@@ -1,3 +1,7 @@
+param(
+    [switch]$NoCache
+)
+
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -39,7 +43,14 @@ if ($rsyncCmd) {
         --exclude='.env' `
         --exclude='.env.*' `
         --exclude='node_modules/' `
-        --exclude='servers/rust-docs/target/' `
+        --exclude='target/' `
+        --exclude='dist/' `
+        --exclude='AGENTS.md' `
+        --exclude='CLAUDE.md' `
+        --exclude='justfile' `
+        --exclude='deploy.ps1' `
+        --exclude='deploy-remote.sh' `
+        --exclude='tests/' `
         -e $sshTransport `
         "$scriptDir/" `
         $rsyncDest
@@ -50,8 +61,8 @@ if ($rsyncCmd) {
     # Fallback SCP — copie fichier par fichier
     Write-Host "==> Syncing (scp) to $remoteTarget ..."
 
-    $excludeDirs  = @('.git', 'node_modules', 'target')
-    $excludeFiles = @('.env', '.env.deploy', '.env.deploy.example')
+    $excludeDirs  = @('.git', 'node_modules', 'target', 'dist', 'tests')
+    $excludeFiles = @('.env', '.env.deploy', '.env.deploy.example', 'AGENTS.md', 'CLAUDE.md', 'justfile', 'deploy.ps1', 'deploy-remote.sh')
 
     $items = Get-ChildItem -Path $scriptDir -Recurse -File | Where-Object {
         $rel   = $_.FullName.Substring($scriptDir.Length + 1)
@@ -75,7 +86,8 @@ if ($rsyncCmd) {
 # ── 2. Rebuild des containers ─────────────────────────────────────────────────
 Write-Host "==> Rebuilding containers..."
 
-$restartCmd = "cd " + $REMOTE_PATH + " && docker compose up -d --build --force-recreate"
+$buildCmd = if ($NoCache) { "docker compose build --no-cache mcp-docs && " } else { "" }
+$restartCmd = "cd " + $REMOTE_PATH + " && " + $buildCmd + "docker compose up -d --build --force-recreate"
 & $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY $remoteTarget $restartCmd
 
 if ($LASTEXITCODE -ne 0) { Write-Error "docker compose a échoué (exit $LASTEXITCODE)"; exit 1 }
