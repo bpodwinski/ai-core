@@ -4,12 +4,12 @@ Personal Docker infrastructure: self-hosted MCP servers.
 
 ## MCP Servers
 
-MCP servers exposed via `https://mcp.benoitpodwinski.com/<name>/mcp`.
+**Self-hosted** — single multi-tenant endpoint `docs` at
+`https://mcp.benoitpodwinski.com/mcp` (OAuth 2.1 PKCE). Filter content with
+the `category` parameter on `search_docs` / `list_topics`:
 
-**Self-hosted** (`mcp.benoitpodwinski.com`):
-
-| Server | Content |
-|--------|---------|
+| Category | Content |
+|----------|---------|
 | `leptos` | Leptos framework book |
 | `leptos-use` | leptos-use hooks library |
 | `rust` | The Rust Programming Language book |
@@ -17,12 +17,16 @@ MCP servers exposed via `https://mcp.benoitpodwinski.com/<name>/mcp`.
 | `induflow` | InduFlow PartHub API |
 | `tailwindcss` | Tailwind CSS v4 — docs + full catalog |
 
-**External** (public, no auth):
+The same endpoint also exposes `rust-docs-mcp` crate-analysis tools
+(`cache_crate`, `search_crate_items`, `get_item_details`, …).
 
-| Server | Content |
-|--------|---------|
-| `openai-docs` | OpenAI developer docs — API, Codex, ChatGPT Apps SDK |
-| `github` | GitHub — PRs, issues, repos (`export GITHUB_TOKEN=…`) |
+**External / stdio** (no self-hosted auth):
+
+| Server | Type | Content |
+|--------|------|---------|
+| `openai-docs` | HTTP | OpenAI developer docs — API, Codex, ChatGPT Apps SDK |
+| `ag-grid` | stdio (`npx`) | AG Grid documentation |
+| `github` | stdio (binary) | GitHub — PRs, issues, repos (`export GITHUB_TOKEN=…`) |
 
 ### Claude Code
 
@@ -43,16 +47,10 @@ curl -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/codex-
      >> ~/.codex/config.toml
 ```
 
-Then authenticate against the self-hosted servers:
+Then authenticate against the self-hosted endpoint (single OAuth flow):
 
 ```bash
-# OAuth PKCE (per server)
-codex mcp login leptos
-codex mcp login leptos-use
-codex mcp login rust
-codex mcp login daisyui
-codex mcp login induflow
-codex mcp login tailwindcss
+codex mcp login docs
 
 # GitHub (personal token)
 export GITHUB_TOKEN=ghp_…
