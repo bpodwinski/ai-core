@@ -15,10 +15,17 @@ Run once after cloning to install all Claude Code + Codex CLI configs:
 bash install.sh
 ```
 
+**Without cloning** (download zip from release, then run) — use Git Bash on Windows:
+```bash
+curl.exe -fsSL https://github.com/bpodwinski/ai-core/releases/latest/download/claude-config.zip -o claude-config.zip
+unzip claude-config.zip install.sh && bash install.sh
+```
+
 This downloads `claude-config.zip` from the latest release and installs:
 - `.mcp.json` → project root
 - `.claude/settings.json` + `.claude/hooks/` → project root
 - `~/.codex/config.toml` → Codex CLI user config
+- `~/.claude/bin/github-mcp-server.exe` → GitHub MCP binary (no Docker needed)
 
 If the user asks to "install the config" or "set up Claude config", run this script.
 
