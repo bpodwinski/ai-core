@@ -6,6 +6,10 @@ on:
     paths:
       - "mcp/servers-manifest.json"
       - "mcp/generate-configs.mjs"
+      - "install.ps1"
+      - "install.sh"
+      - ".claude/settings.json"
+      - ".claude/hooks/**"
   workflow_dispatch:
 
 permissions:
@@ -33,7 +37,10 @@ jobs:
           cp .claude/settings.json       staging/.claude/settings.json
           cp .claude/hooks/rust-check.py staging/.claude/hooks/rust-check.py
           cp install.sh                  staging/install.sh
+          cp install.ps1                 staging/install.ps1
           cd staging && zip -r ../dist/claude-config.zip .
+          # Also publish install.ps1 as a standalone asset for irm | iex usage
+          cp ../install.ps1 ../dist/install.ps1
 
       - name: Publish versioned GitHub Release
         run: |
@@ -42,6 +49,7 @@ jobs:
             --title "MCP Configs ${TAG#mcp-configs-}" \
             --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`.\n\nExtraire \`claude-config.zip\` à la racine du projet pour tout installer." \
             --latest \
-            dist/claude-config.zip
+            dist/claude-config.zip \
+            dist/install.ps1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
