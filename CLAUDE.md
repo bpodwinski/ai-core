@@ -7,6 +7,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Docker-based n8n workflow automation system with custom Python IMAP microservices, Qdrant vector database, and Cloudflare Tunnel for public HTTPS access. Includes a self-hosted MCP server infrastructure at `mcp/`.
 
+## Setup on a new machine
+
+Run once after cloning to install all Claude Code + Codex CLI configs:
+
+```bash
+bash install.sh
+```
+
+This downloads `claude-config.zip` from the latest release and installs:
+- `.mcp.json` → project root
+- `.claude/settings.json` + `.claude/hooks/` → project root
+- `~/.codex/config.toml` → Codex CLI user config
+
+If the user asks to "install the config" or "set up Claude config", run this script.
+
 ## Common Commands
 
 ```bash
