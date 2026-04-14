@@ -1,0 +1,10 @@
+# Force LF pour les fichiers exécutés sur Linux
+*.sh    text eol=lf
+*.py    text eol=lf
+
+# Windows scripts gardent CRLF
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+
+# Tout le reste — auto
+*       text=auto
