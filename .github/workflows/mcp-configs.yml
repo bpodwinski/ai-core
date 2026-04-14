@@ -32,6 +32,7 @@ jobs:
           cp dist/codex-config.toml      staging/.codex/config.toml
           cp .claude/settings.json       staging/.claude/settings.json
           cp .claude/hooks/rust-check.py staging/.claude/hooks/rust-check.py
+          cp install.sh                  staging/install.sh
           cd staging && zip -r ../dist/claude-config.zip .
 
       - name: Publish versioned GitHub Release
