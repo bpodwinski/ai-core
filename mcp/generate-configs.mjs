@@ -29,11 +29,13 @@ const claudeConfig = {
   mcpServers: {
     // Self-hosted multi-tenant docs server
     [mcpName]: { type: 'http', url: `${baseUrl}${mcpEndpoint}` },
-    // External HTTP (pas d'auth)
+    // External HTTP — bearer token injecté comme header si bearer_token_env_var est défini
     ...Object.fromEntries(
       external.map(s => [
         s.name,
-        { type: 'http', url: s.url }
+        s.bearer_token_env_var
+          ? { type: 'http', url: s.url, headers: { Authorization: `Bearer \${${s.bearer_token_env_var}}` } }
+          : { type: 'http', url: s.url }
       ])
     ),
     // Stdio (process local via npx/node/etc.)
