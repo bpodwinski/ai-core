@@ -4,7 +4,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $envFile = Join-Path $scriptDir ".env.deploy"
 
 if (-not (Test-Path $envFile)) {
-    Write-Error "Fichier $envFile manquant. Creez-le a partir de .env.deploy.example"
+    Write-Error "Fichier $envFile manquant. Créez-le à partir de .env.deploy.example"
     exit 1
 }
 
@@ -15,44 +15,37 @@ Get-Content $envFile | ForEach-Object {
     }
 }
 
-# Dossiers et fichiers a exclure
-$excludeDirs = @('.git', 'node_modules', 'target')
-$excludeFiles = @('.env', '.env.deploy', '.env.deploy.example')
+# Chemin SSH (Windows natif si disponible, sinon ssh du PATH)
+$SSH_CMD = if ($env:SSH_CMD) { $env:SSH_CMD } else { "ssh" }
 
-Write-Host "==> Syncing files to $REMOTE_HOST..."
+# ── 1. Sync des fichiers via rsync ────────────────────────────────────────────
+Write-Host "==> Syncing files to ${REMOTE_HOST}:${REMOTE_PATH} ..."
 
-# Collecter les fichiers en excluant les dossiers et fichiers blacklistes
-$items = Get-ChildItem -Path $scriptDir -Recurse -File | Where-Object {
-    $rel = $_.FullName.Substring($scriptDir.Length + 1)
-    $parts = $rel.Split('\')
+# rsync utilise ssh comme transport — la clé mcp_deploy est autorisée pour rsync par deploy-remote.sh
+& rsync -az --delete `
+    --exclude='.git/' `
+    --exclude='.env' `
+    --exclude='.env.*' `
+    --exclude='node_modules/' `
+    --exclude='servers/rust-docs/target/' `
+    -e "$SSH_CMD -p $REMOTE_PORT -i $SSH_KEY" `
+    "$scriptDir/" `
+    "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}/"
 
-    # Exclure si un segment du chemin matche un dossier exclu
-    $inExcludedDir = $false
-    foreach ($part in $parts) {
-        if ($excludeDirs -contains $part) {
-            $inExcludedDir = $true
-            break
-        }
-    }
-
-    # Exclure si le nom du fichier matche
-    $isExcludedFile = $excludeFiles -contains $_.Name
-
-    (-not $inExcludedDir) -and (-not $isExcludedFile)
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "rsync a échoué (exit $LASTEXITCODE)"
+    exit 1
 }
 
-# Copier chaque fichier via scp
-foreach ($item in $items) {
-    $rel = $item.FullName.Substring($scriptDir.Length + 1).Replace('\', '/')
-    $remotePath = "${REMOTE_PATH}${rel}"
-    $remoteDir = $remotePath -replace '/[^/]+$', ''
-
-    & ssh -p $REMOTE_PORT -i $SSH_KEY "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p '$remoteDir'" 2>$null
-    & scp -P $REMOTE_PORT -i $SSH_KEY $item.FullName "${REMOTE_USER}@${REMOTE_HOST}:${remotePath}" | Out-Null
-    Write-Host "  $rel"
-}
-
+# ── 2. Rebuild des containers ─────────────────────────────────────────────────
 Write-Host "==> Rebuilding containers..."
-& ssh -p $REMOTE_PORT -i $SSH_KEY "${REMOTE_USER}@${REMOTE_HOST}" "cd $REMOTE_PATH && docker compose up -d --build --force-recreate"
+
+& $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY "${REMOTE_USER}@${REMOTE_HOST}" `
+    "docker compose up -d --build --force-recreate"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "docker compose a échoué (exit $LASTEXITCODE)"
+    exit 1
+}
 
 Write-Host "==> Done."
