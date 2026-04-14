@@ -8,22 +8,38 @@ RUN rustup target add x86_64-unknown-linux-musl
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/mcp-common/ crates/mcp-common/
-COPY crates/mcp-server/Cargo.toml crates/mcp-server/Cargo.toml
-COPY crates/mcp-server/src/ crates/mcp-server/src/
+COPY crates/mcp-server/ crates/mcp-server/
+# Workspace stubs — Cargo needs all member manifests even if we don't build them
+COPY crates/mcp-build/Cargo.toml crates/mcp-build/Cargo.toml
+COPY crates/mcp-configgen/Cargo.toml crates/mcp-configgen/Cargo.toml
+COPY crates/mcp-hooks/Cargo.toml crates/mcp-hooks/Cargo.toml
+RUN mkdir -p crates/mcp-build/src crates/mcp-configgen/src crates/mcp-hooks/src \
+    && echo 'fn main(){}' > crates/mcp-build/src/main.rs \
+    && echo 'fn main(){}' > crates/mcp-configgen/src/main.rs \
+    && echo 'fn main(){}' > crates/mcp-hooks/src/main.rs
 
 RUN cargo build --release --target x86_64-unknown-linux-musl -p mcp-server
 
-# ── Stage 2 : Build mcp-build (docs fetcher + transforms, glibc is fine) ─────
+# ── Stage 2 : Build mcp-build (musl = static binary, no GLIBC dependency) ────
 FROM rust:1.94-slim AS build-tools
 
-RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y musl-tools pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/mcp-common/ crates/mcp-common/
 COPY crates/mcp-build/ crates/mcp-build/
+# Workspace stubs — Cargo needs all member manifests even if we don't build them
+COPY crates/mcp-server/Cargo.toml crates/mcp-server/Cargo.toml
+COPY crates/mcp-configgen/Cargo.toml crates/mcp-configgen/Cargo.toml
+COPY crates/mcp-hooks/Cargo.toml crates/mcp-hooks/Cargo.toml
+RUN mkdir -p crates/mcp-server/src crates/mcp-configgen/src crates/mcp-hooks/src \
+    && echo 'fn main(){}' > crates/mcp-server/src/main.rs \
+    && echo 'fn main(){}' > crates/mcp-configgen/src/main.rs \
+    && echo 'fn main(){}' > crates/mcp-hooks/src/main.rs
 
-RUN cargo build --release -p mcp-build
+RUN cargo build --release --target x86_64-unknown-linux-musl -p mcp-build
 
 # ── Stage 3 : Build rust-docs-mcp (nightly via rustup) ───────────────────────
 FROM debian:bookworm-slim AS rdmcp-builder
@@ -45,7 +61,7 @@ FROM debian:bookworm-slim AS docs-builder
 RUN apt-get update && apt-get install -y git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY --from=build-tools /app/target/release/mcp-build /usr/local/bin/mcp-build
+COPY --from=build-tools /app/target/x86_64-unknown-linux-musl/release/mcp-build /usr/local/bin/mcp-build
 
 # Manifest (source of truth) + local docs referenced by type:"local" entries
 COPY servers-manifest.json ./
