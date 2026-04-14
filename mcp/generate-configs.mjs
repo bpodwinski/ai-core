@@ -38,11 +38,13 @@ const claudeConfig = {
           : { type: 'http', url: s.url }
       ])
     ),
-    // Stdio (process local via npx/node/etc.)
+    // Stdio (process local via npx/node/etc.) — env passé si défini dans le manifest
     ...Object.fromEntries(
       stdio.map(s => [
         s.name,
-        { type: 'stdio', command: s.command, args: s.args }
+        s.env
+          ? { type: 'stdio', command: s.command, args: s.args, env: s.env }
+          : { type: 'stdio', command: s.command, args: s.args }
       ])
     ),
   }
