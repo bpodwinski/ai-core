@@ -17,18 +17,12 @@
     },
     "github": {
       "type": "stdio",
-      "command": "docker",
+      "command": "${USERPROFILE}/.claude/bin/github-mcp-server.exe",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
+        "stdio"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}",
-        "DOCKER_HOST": "npipe:////./pipe/docker_engine"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
     }
   }

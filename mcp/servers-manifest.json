@@ -67,10 +67,10 @@
     },
     {
       "name": "github",
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
-      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}", "DOCKER_HOST": "npipe:////./pipe/docker_engine" },
-      "description": "GitHub — PRs, issues, repos, code search (ghcr.io/github/github-mcp-server)"
+      "command": "${USERPROFILE}/.claude/bin/github-mcp-server.exe",
+      "args": ["stdio"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" },
+      "description": "GitHub — PRs, issues, repos, code search (github/github-mcp-server binary)"
     }
   ],
   "external": [
