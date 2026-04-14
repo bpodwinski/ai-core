@@ -33,6 +33,8 @@ jobs:
             --notes "Configurations MCP auto-générées depuis \`mcp/servers-manifest.json\`." \
             --latest \
             dist/claude-mcp.json \
-            dist/codex-config.toml
+            dist/codex-config.toml \
+            .claude/hooks/rust-check.py \
+            .claude/settings.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
