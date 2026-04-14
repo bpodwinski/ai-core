@@ -18,19 +18,24 @@ Get-Content $envFile | ForEach-Object {
 # Chemin SSH (Windows natif si disponible, sinon ssh du PATH)
 $SSH_CMD = if ($env:SSH_CMD) { $env:SSH_CMD } else { "ssh" }
 
-# ── 1. Sync des fichiers via rsync ────────────────────────────────────────────
-Write-Host "==> Syncing files to ${REMOTE_HOST}:${REMOTE_PATH} ..."
+# Construire les chaînes en dehors de l'interpolation pour éviter
+# l'ambiguïté du ":" avec la syntaxe de scope PowerShell ($env:, etc.)
+$remoteTarget  = $REMOTE_USER + "@" + $REMOTE_HOST
+$rsyncDest     = $remoteTarget + ":" + $REMOTE_PATH + "/"
+$sshTransport  = $SSH_CMD + " -p " + $REMOTE_PORT + " -i " + $SSH_KEY
 
-# rsync utilise ssh comme transport — la clé mcp_deploy est autorisée pour rsync par deploy-remote.sh
+# ── 1. Sync des fichiers via rsync ────────────────────────────────────────────
+Write-Host "==> Syncing files to $rsyncDest ..."
+
 & rsync -az --delete `
     --exclude='.git/' `
     --exclude='.env' `
     --exclude='.env.*' `
     --exclude='node_modules/' `
     --exclude='servers/rust-docs/target/' `
-    -e "$SSH_CMD -p $REMOTE_PORT -i $SSH_KEY" `
+    -e $sshTransport `
     "$scriptDir/" `
-    "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}/"
+    $rsyncDest
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "rsync a échoué (exit $LASTEXITCODE)"
@@ -40,7 +45,7 @@ if ($LASTEXITCODE -ne 0) {
 # ── 2. Rebuild des containers ─────────────────────────────────────────────────
 Write-Host "==> Rebuilding containers..."
 
-& $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY "${REMOTE_USER}@${REMOTE_HOST}" `
+& $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY $remoteTarget `
     "docker compose up -d --build --force-recreate"
 
 if ($LASTEXITCODE -ne 0) {
