@@ -67,10 +67,10 @@
     },
     {
       "name": "github",
-      "command": "npx",
-      "args": ["-y", "@github/github-mcp-server", "stdio"],
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
       "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" },
-      "description": "GitHub — PRs, issues, repos, code search (github/github-mcp-server)"
+      "description": "GitHub — PRs, issues, repos, code search (ghcr.io/github/github-mcp-server)"
     }
   ],
   "external": [
