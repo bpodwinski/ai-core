@@ -13,15 +13,6 @@
       }
     },
     {
-      "name": "leptos-use",
-      "description": "leptos-use hooks library (github.com/synphonyte/leptos-use)",
-      "source": {
-        "type": "git",
-        "url": "https://github.com/synphonyte/leptos-use",
-        "docsPath": "docs/book/src/"
-      }
-    },
-    {
       "name": "rust",
       "description": "The Rust Programming Language book (github.com/rust-lang/book)",
       "source": {

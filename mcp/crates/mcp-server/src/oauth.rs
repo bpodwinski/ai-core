@@ -12,6 +12,7 @@ use sha2::Digest;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
 
 const AUTHORIZE_HTML: &str = include_str!("views/authorize.html");
@@ -30,12 +31,15 @@ pub struct OAuthState {
     codes: Mutex<HashMap<String, CodeEntry>>,
 }
 
+const CODE_TTL: Duration = Duration::from_secs(600); // 10 min
+
 #[derive(Clone, Debug)]
 struct CodeEntry {
     client_id: String,
     redirect_uri: String,
     code_challenge: String,
     used: bool,
+    created_at: Instant,
 }
 
 impl OAuthState {
@@ -172,6 +176,7 @@ async fn authorize(State(s): State<Arc<OAuthState>>, Query(q): Query<AuthorizeQu
             redirect_uri: redirect_uri.clone(),
             code_challenge: challenge,
             used: false,
+            created_at: Instant::now(),
         },
     );
 
@@ -251,6 +256,8 @@ async fn token(State(s): State<Arc<OAuthState>>, Form(req): Form<TokenReq>) -> R
     };
 
     let mut codes = s.codes.lock().unwrap();
+    // Nettoyage des codes expirés ou déjà utilisés
+    codes.retain(|_, e| !e.used && e.created_at.elapsed() < CODE_TTL);
     let entry = match codes.get_mut(&code) {
         Some(e) => e,
         None => return error_json(StatusCode::BAD_REQUEST, "invalid_grant"),

@@ -31,7 +31,11 @@ server {
 
     location /oauth/ {
         limit_req zone=oauth_limit burst=10 nodelay;
-        add_header Content-Security-Policy "default-src 'self'" always;
+        add_header Content-Security-Policy  "default-src 'self'"  always;
+        add_header X-Content-Type-Options   "nosniff"             always;
+        add_header X-Frame-Options          "DENY"                always;
+        add_header X-XSS-Protection         "1; mode=block"       always;
+        add_header Referrer-Policy          "no-referrer"         always;
         proxy_pass http://mcp-docs:80;
     }
 

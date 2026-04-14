@@ -32,11 +32,11 @@ deploy:
 deploy-no-cache:
     powershell -NoProfile -ExecutionPolicy Bypass -File deploy.ps1 -NoCache
 
-# Build + deploy
-ship: docker-build deploy
+# Build + deploy (remote rebuilds from source, no local build needed)
+ship: deploy
 
 # Build + deploy (force full rebuild, no Docker cache)
-ship-no-cache: docker-build deploy-no-cache
+ship-no-cache: deploy-no-cache
 
 # Restart a service (ex: just restart mcp-docs)
 restart SERVICE:
