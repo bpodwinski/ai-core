@@ -15,6 +15,13 @@ use std::{
 };
 
 const AUTHORIZE_HTML: &str = include_str!("views/authorize.html");
+const AUTHORIZE_CSS: &str = "\
+body{font-family:sans-serif;max-width:360px;margin:80px auto;text-align:center;color:#1a1a1a}\
+h2{font-size:1.4rem;margin-bottom:.5rem}\
+p{color:#555;margin-bottom:1.5rem}\
+button{padding:10px 28px;background:#0057b8;color:#fff;border:none;border-radius:6px;font-size:1rem;cursor:pointer}\
+button:hover{background:#004a9e}\
+";
 
 pub struct OAuthState {
     issuer: String,
@@ -80,6 +87,7 @@ pub fn router(state: Arc<OAuthState>) -> Router {
         .route("/oauth/approve", get(approve))
         .route("/oauth/token", post(token))
         .route("/oauth/validate", get(validate))
+        .route("/oauth/style.css", get(authorize_css))
         .with_state(state)
 }
 
@@ -173,6 +181,13 @@ async fn authorize(State(s): State<Arc<OAuthState>>, Query(q): Query<AuthorizeQu
         .replace("{{REDIRECT_URI}}", &esc_html(&redirect_uri))
         .replace("{{STATE}}", &esc_html(&state_val));
     Html(html).into_response()
+}
+
+async fn authorize_css() -> impl IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        AUTHORIZE_CSS,
+    )
 }
 
 #[derive(Deserialize)]
