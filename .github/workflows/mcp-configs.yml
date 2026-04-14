@@ -25,6 +25,9 @@ jobs:
       - name: Generate MCP configs
         run: node mcp/generate-configs.mjs
 
+      - name: Package Claude hooks
+        run: zip -r dist/claude-hooks.zip .claude/hooks/ .claude/settings.json
+
       - name: Publish versioned GitHub Release
         run: |
           TAG="mcp-configs-$(date -u +%Y%m%d)-${{ github.run_number }}"
@@ -34,7 +37,6 @@ jobs:
             --latest \
             dist/claude-mcp.json \
             dist/codex-config.toml \
-            .claude/hooks/rust-check.py \
-            .claude/settings.json
+            dist/claude-hooks.zip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
