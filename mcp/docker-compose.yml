@@ -43,6 +43,7 @@ services:
     environment:
       OAUTH_ISSUER: "${OAUTH_ISSUER}"
       MCP_API_KEY: "${MCP_API_KEY}"
+      OAUTH_ALLOWED_ORIGINS: "${OAUTH_ALLOWED_ORIGINS:-}"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/.well-known/oauth-authorization-server', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s

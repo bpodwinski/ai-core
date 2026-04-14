@@ -7,10 +7,25 @@ app.use(express.urlencoded({ extended: true }));
 
 const ISSUER = process.env.OAUTH_ISSUER;
 const ACCESS_TOKEN = process.env.MCP_API_KEY;
+// Comma-separated allowed redirect URI origins, e.g. "https://claude.ai,http://localhost"
+// If empty, all origins are allowed (development only)
+const ALLOWED_ORIGINS = process.env.OAUTH_ALLOWED_ORIGINS
+  ? process.env.OAUTH_ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+  : [];
 
 if (!ISSUER || !ACCESS_TOKEN) {
   console.error('Missing OAUTH_ISSUER or MCP_API_KEY');
   process.exit(1);
+}
+
+function isAllowedRedirectUri(uri) {
+  if (ALLOWED_ORIGINS.length === 0) return true; // open if not configured
+  try {
+    const { origin } = new URL(uri);
+    return ALLOWED_ORIGINS.some(allowed => origin === allowed || uri.startsWith(allowed));
+  } catch {
+    return false;
+  }
 }
 
 // In-memory stores (reset on container restart)
@@ -63,6 +78,10 @@ app.get('/oauth/authorize', (req, res) => {
 
   if (response_type !== 'code' || code_challenge_method !== 'S256' || !code_challenge) {
     return res.status(400).json({ error: 'invalid_request' });
+  }
+
+  if (!isAllowedRedirectUri(redirect_uri)) {
+    return res.status(400).json({ error: 'invalid_redirect_uri' });
   }
 
   const code = crypto.randomBytes(16).toString('hex');
@@ -118,6 +137,10 @@ app.post('/oauth/token', (req, res) => {
     return res.status(400).json({ error: 'unsupported_grant_type' });
   }
 
+  if (!isAllowedRedirectUri(redirect_uri)) {
+    return res.status(400).json({ error: 'invalid_redirect_uri' });
+  }
+
   const entry = codes.get(code);
   if (!entry || entry.used || entry.client_id !== client_id || entry.redirect_uri !== redirect_uri) {
     return res.status(400).json({ error: 'invalid_grant' });
@@ -134,7 +157,7 @@ app.post('/oauth/token', (req, res) => {
   res.json({
     access_token: ACCESS_TOKEN,
     token_type: 'Bearer',
-    expires_in: 31536000, // 1 an
+    expires_in: 3600, // 1 heure
   });
 });
 
