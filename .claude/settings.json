@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \".claude/hooks/rust-check.py\"",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/rust-check.py\"",
             "asyncRewake": true,
             "rewakeMessage": "cargo clippy found issues in the Rust file you just edited:",
             "statusMessage": "cargo fmt + clippy...",
