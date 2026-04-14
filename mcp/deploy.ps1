@@ -75,8 +75,8 @@ if ($rsyncCmd) {
 # ── 2. Rebuild des containers ─────────────────────────────────────────────────
 Write-Host "==> Rebuilding containers..."
 
-& $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY $remoteTarget `
-    "docker compose up -d --build --force-recreate"
+$restartCmd = "cd " + $REMOTE_PATH + " && docker compose up -d --build --force-recreate"
+& $SSH_CMD -p $REMOTE_PORT -i $SSH_KEY $remoteTarget $restartCmd
 
 if ($LASTEXITCODE -ne 0) { Write-Error "docker compose a échoué (exit $LASTEXITCODE)"; exit 1 }
 

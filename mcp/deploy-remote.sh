@@ -29,10 +29,15 @@ case "${SSH_ORIGINAL_COMMAND:-}" in
     exec $SSH_ORIGINAL_COMMAND
     ;;
 
-  # Restart des containers après sync
-  "docker compose up -d --build --force-recreate")
-    cd "$DEPLOY_PATH"
-    exec docker compose up -d --build --force-recreate
+  # Restart des containers après sync (avec cd vers le deploy path)
+  "cd "*)
+    # Valider que la commande se termine par docker compose up
+    if [[ "${SSH_ORIGINAL_COMMAND}" == *"docker compose up -d --build --force-recreate" ]]; then
+      exec bash -c "${SSH_ORIGINAL_COMMAND}"
+    else
+      echo "deploy-mcp.sh: commande cd non autorisée: ${SSH_ORIGINAL_COMMAND}" >&2
+      exit 1
+    fi
     ;;
 
   # Commande non autorisée
