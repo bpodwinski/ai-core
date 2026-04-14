@@ -12,6 +12,11 @@
       "type": "stdio",
       "command": "npx",
       "args": [
+        "-y",
+        "-p",
+        "ag-mcp@1.0.0",
+        "-p",
+        "ajv",
         "ag-mcp"
       ]
     },
