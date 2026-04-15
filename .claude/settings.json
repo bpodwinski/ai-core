@@ -1,14 +1,11 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/mcp/target/release/mcp-hooks rust-check",
-            "asyncRewake": true,
-            "rewakeMessage": "cargo clippy found issues in the Rust file you just edited:",
+            "command": "cd \"$CLAUDE_PROJECT_DIR/mcp\" && cargo fmt --all 2>/dev/null; cargo clippy --all-targets 2>&1 | grep -q '^error' && exit 2 || exit 0",
             "statusMessage": "cargo fmt + clippy...",
             "timeout": 300
           }
