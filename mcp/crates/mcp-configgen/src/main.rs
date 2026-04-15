@@ -1,3 +1,8 @@
+//! Config generator binary.
+//!
+//! Reads `servers-manifest.json` and emits `dist/claude-mcp.json` (Claude Code
+//! client config) and `dist/codex-config.toml` (Codex CLI config).
+
 use anyhow::{Context, Result};
 use clap::Parser;
 use mcp_common::{DocSourceEntry, ExternalServer, Manifest, StdioServer};
