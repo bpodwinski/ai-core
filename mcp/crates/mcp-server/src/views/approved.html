@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCP — Accès autorisé</title>
+  <link rel="stylesheet" href="/oauth/style.css">
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrap icon-wrap--success check-anim">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+
+    <h1>Accès autorisé</h1>
+    <p class="desc">L'autorisation a été accordée avec succès.<br>Redirection vers l'application en cours&hellip;</p>
+
+    <div class="spinner"></div>
+
+    <p class="footer">Vous pouvez fermer cette fenêtre si la redirection ne se produit pas.</p>
+  </div>
+
+  <script>
+    (function() {
+      var el = document.getElementById('redir');
+      if (el) { setTimeout(function() { window.location.href = el.getAttribute('data-url'); }, 1200); }
+    })();
+  </script>
+  <span id="redir" data-url="{{REDIRECT_URL}}" style="display:none"></span>
+</body>
+</html>

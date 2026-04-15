@@ -2,17 +2,57 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>MCP — Autorisation</title>
   <link rel="stylesheet" href="/oauth/style.css">
 </head>
 <body>
-  <h2>MCP — Autorisation</h2>
-  <p>Autoriser l'accès à vos MCP servers personnels&nbsp;?</p>
-  <form method="GET" action="/oauth/approve">
-    <input type="hidden" name="code" value="{{CODE}}">
-    <input type="hidden" name="redirect_uri" value="{{REDIRECT_URI}}">
-    <input type="hidden" name="state" value="{{STATE}}">
-    <button type="submit">Autoriser</button>
-  </form>
+  <div class="card">
+    <div class="icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1zm0 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0 8c2 0 6 1 6 3v1H6v-1c0-2 4-3 6-3z"/>
+      </svg>
+    </div>
+
+    <h1>Autorisation requise</h1>
+    <p class="desc">Une application demande l'accès à vos serveurs MCP personnels.</p>
+
+    <div class="permissions">
+      <div class="perm-header">Permissions demandées</div>
+
+      <div class="perm-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Rechercher dans la documentation
+      </div>
+
+      <div class="perm-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        Lire les pages de documentation
+      </div>
+
+      <div class="perm-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        Lister les catégories disponibles
+      </div>
+    </div>
+
+    <form method="GET" action="/oauth/approve">
+      <input type="hidden" name="code" value="{{CODE}}">
+      <input type="hidden" name="redirect_uri" value="{{REDIRECT_URI}}">
+      <input type="hidden" name="state" value="{{STATE}}">
+      <button type="submit" class="btn btn-primary">Autoriser l'accès</button>
+    </form>
+
+    <p class="footer">Serveur MCP personnel &middot; Flux OAuth 2.1 sécurisé (PKCE)</p>
+  </div>
 </body>
 </html>

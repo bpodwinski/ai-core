@@ -8,13 +8,19 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::Arc;
 
+/// A single documentation page loaded from the filesystem.
 #[derive(Clone)]
 pub(crate) struct DocEntry {
+    /// Relative directory path used as category (e.g. `"leptos/animation"`).
     category: String,
+    /// File stem used as the topic name (e.g. `"use_interval"`).
     topic: String,
+    /// Full Markdown content of the page.
     content: String,
 }
 
+/// MCP server handler that serves static documentation pages and proxies
+/// crate-analysis tool calls to the embedded `rust-docs-mcp` subprocess.
 #[derive(Clone)]
 pub struct DocServer {
     docs: Arc<Vec<DocEntry>>,
@@ -24,6 +30,7 @@ pub struct DocServer {
 
 // ── Static docs tool inputs ───────────────────────────────────────────────────
 
+/// Input parameters for the `search_docs` MCP tool.
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct SearchInput {
     /// Search query string
@@ -33,12 +40,14 @@ pub struct SearchInput {
     pub category: Option<String>,
 }
 
+/// Input parameters for the `get_doc` MCP tool.
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct GetDocInput {
     /// Full path: "category/topic", e.g. "leptos-use/animation/use_interval"
     pub path: String,
 }
 
+/// Input parameters for the `list_topics` MCP tool.
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 pub struct ListTopicsInput {
     /// Filter by category prefix, e.g. "leptos-use", "leptos-use/animation", "axum" (optional)
@@ -48,9 +57,11 @@ pub struct ListTopicsInput {
 
 // ── Crate tool inputs ─────────────────────────────────────────────────────────
 
+/// Input parameters for the `list_cached_crates` MCP tool.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct ListCachedCratesInput {}
 
+/// Input parameters for the `cache_crate` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct CacheCrateInput {
     /// Name of the crate (e.g. "axum", "serde")
@@ -89,6 +100,7 @@ pub struct CacheCrateInput {
     pub no_default_features: Option<bool>,
 }
 
+/// Input parameters identifying a cached crate by name, version, and optional workspace member.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct CrateNameInput {
     /// Name of the cached crate
@@ -100,6 +112,7 @@ pub struct CrateNameInput {
     pub member: Option<String>,
 }
 
+/// Input parameters for the `search_crate_items` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct SearchCrateItemsInput {
     /// Name of the cached crate (e.g. "axum")
@@ -128,6 +141,7 @@ pub struct SearchCrateItemsInput {
     pub preview: Option<bool>,
 }
 
+/// Input parameters for the `get_item_details` and `get_item_docs` MCP tools.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GetItemInput {
     /// Name of the cached crate
@@ -141,6 +155,7 @@ pub struct GetItemInput {
     pub member: Option<String>,
 }
 
+/// Input parameters for the `get_item_source` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GetItemSourceInput {
     /// Name of the cached crate
@@ -157,6 +172,7 @@ pub struct GetItemSourceInput {
     pub member: Option<String>,
 }
 
+/// Input parameters for the `list_crate_items` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ListCrateItemsInput {
     /// Name of the cached crate
@@ -177,6 +193,7 @@ pub struct ListCrateItemsInput {
     pub member: Option<String>,
 }
 
+/// Input parameters for the `search_crate_items_fuzzy` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct SearchItemsFuzzyInput {
     /// Name of the cached crate
@@ -202,12 +219,14 @@ pub struct SearchItemsFuzzyInput {
     pub member: Option<String>,
 }
 
+/// Input parameters for the `list_crate_versions` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ListCrateVersionsInput {
     /// Name of the crate on crates.io
     pub crate_name: String,
 }
 
+/// Input parameters for the `remove_crate` MCP tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct RemoveCrateInput {
     /// Name of the cached crate to remove
@@ -218,13 +237,19 @@ pub struct RemoveCrateInput {
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
+/// Uniform text response returned by all MCP tool handlers.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct DocResult {
+    /// Markdown-formatted result text delivered to the MCP client.
     pub text: String,
 }
 
 // ── Filesystem loading ────────────────────────────────────────────────────────
 
+/// Recursively load all `.md` files from `base` and return them as [`DocEntry`] values.
+///
+/// Each entry's `category` is the relative directory path (using `/` as separator),
+/// and `topic` is the file stem. Files that cannot be read are silently skipped.
 pub fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
     let mut docs = Vec::new();
     if !base.is_dir() {
@@ -240,6 +265,10 @@ pub fn load_docs_from_dir(base: &Path) -> Vec<DocEntry> {
     docs
 }
 
+/// Extract the unique top-level category names from a slice of doc entries.
+///
+/// Only the first path segment is considered (e.g. `"leptos/animation"` → `"leptos"`).
+/// Returns a sorted, deduplicated list.
 pub fn extract_categories(docs: &[DocEntry]) -> Vec<String> {
     let mut cats = BTreeSet::new();
     for doc in docs {
@@ -284,6 +313,10 @@ fn load_recursive(base: &Path, current: &Path, docs: &mut Vec<DocEntry>) {
 // ── Server implementation ─────────────────────────────────────────────────────
 
 impl DocServer {
+    /// Create a new `DocServer` from pre-loaded documentation entries.
+    ///
+    /// Pass `crate_proxy: None` if the `rust-docs-mcp` subprocess is unavailable;
+    /// crate tools will return an informative error message in that case.
     pub fn new(
         docs: Arc<Vec<DocEntry>>,
         categories: Vec<String>,

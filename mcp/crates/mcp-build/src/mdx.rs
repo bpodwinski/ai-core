@@ -1,7 +1,19 @@
+//! MDX → CommonMark transform for documentation sources.
+
 use anyhow::{Context, Result};
 use std::path::Path;
 use walkdir::WalkDir;
 
+/// Recursively convert all `.mdx` files in `dir` to `.md` by stripping MDX
+/// constructs (imports, exports, JSX elements, brace expressions).
+///
+/// Each converted file is written alongside the original with a `.md` extension.
+/// Conversion errors are logged to stderr and do not abort the overall pass.
+///
+/// # Errors
+///
+/// Returns an error if `dir` cannot be traversed or if reading a source file
+/// fails irrecoverably.
 pub fn strip_dir(dir: &Path) -> Result<()> {
     println!("Traitement MDX → Markdown dans : {}", dir.display());
     let mut processed = 0usize;

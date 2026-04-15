@@ -1,9 +1,22 @@
+//! Post-edit Rust quality hook: `cargo fmt` + `cargo clippy`.
+
 use anyhow::Result;
 use serde_json::Value;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+/// Run `cargo fmt --all` and `cargo clippy --all-targets` for the Cargo
+/// workspace that contains the file described in the hook JSON payload on stdin.
+///
+/// Reads a Claude Code `PostToolUse` JSON event from stdin. Does nothing if the
+/// modified file is not a `.rs` file or if no `Cargo.toml` ancestor is found.
+/// Exits with code 2 if clippy reports errors.
+///
+/// # Errors
+///
+/// Returns an error if stdin cannot be read or if the clippy subprocess cannot
+/// be spawned.
 pub fn run() -> Result<()> {
     let mut stdin = String::new();
     io::stdin().read_to_string(&mut stdin)?;

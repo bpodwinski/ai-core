@@ -1,3 +1,8 @@
+//! Build toolchain binary for MCP documentation sources.
+//!
+//! Subcommands: `fetch-docs` (clone/download and transform sources into
+//! `/docs/`), `generate-catalog` (generate Tailwind CSS class catalog).
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

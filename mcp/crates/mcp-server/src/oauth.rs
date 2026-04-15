@@ -1,7 +1,7 @@
 use axum::{
     extract::{Form, Query, State},
     http::{HeaderMap, StatusCode},
-    response::{Html, IntoResponse, Redirect, Response},
+    response::{Html, IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -16,21 +16,64 @@ use std::{
 };
 
 const AUTHORIZE_HTML: &str = include_str!("views/authorize.html");
+const APPROVED_HTML: &str = include_str!("views/approved.html");
 const AUTHORIZE_CSS: &str = "\
-body{font-family:sans-serif;max-width:360px;margin:80px auto;text-align:center;color:#1a1a1a}\
-h2{font-size:1.4rem;margin-bottom:.5rem}\
-p{color:#555;margin-bottom:1.5rem}\
-button{padding:10px 28px;background:#0057b8;color:#fff;border:none;border-radius:6px;font-size:1rem;cursor:pointer}\
-button:hover{background:#004a9e}\
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;\
+background:radial-gradient(ellipse at top,#1e1b4b 0%,#0d0d14 60%);\
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;\
+color:#e2e8f0;padding:1rem}\
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);\
+border-radius:20px;padding:2.5rem 2rem;max-width:420px;width:100%;\
+box-shadow:0 0 0 1px rgba(99,102,241,.1),0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}\
+.icon-wrap{width:60px;height:60px;border-radius:16px;\
+background:linear-gradient(135deg,#7c3aed,#6366f1);\
+display:flex;align-items:center;justify-content:center;\
+margin:0 auto 1.5rem;color:#fff;box-shadow:0 8px 24px rgba(124,58,237,.4)}\
+.icon-wrap--success{background:linear-gradient(135deg,#059669,#10b981);\
+box-shadow:0 8px 24px rgba(16,185,129,.4)}\
+h1{font-size:1.5rem;font-weight:700;text-align:center;color:#f1f5f9;\
+margin-bottom:.5rem;letter-spacing:-.02em}\
+.desc{text-align:center;color:#94a3b8;font-size:.9rem;line-height:1.6;margin-bottom:1.75rem}\
+.permissions{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);\
+border-radius:12px;padding:1.125rem;margin-bottom:1.75rem}\
+.perm-header{font-size:.7rem;font-weight:700;text-transform:uppercase;\
+letter-spacing:.1em;color:#6366f1;margin-bottom:.875rem}\
+.perm-item{display:flex;align-items:center;gap:.625rem;padding:.375rem 0;\
+font-size:.85rem;color:#cbd5e1}\
+.perm-item svg{flex-shrink:0;color:#6366f1}\
+.perm-item+.perm-item{border-top:1px solid rgba(99,102,241,.1);margin-top:.375rem;padding-top:.75rem}\
+.btn{display:block;width:100%;padding:.9rem;border:none;border-radius:12px;\
+font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;\
+text-align:center;letter-spacing:-.01em}\
+.btn-primary{background:linear-gradient(135deg,#7c3aed,#6366f1);color:#fff}\
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(99,102,241,.45)}\
+.btn-primary:active{transform:translateY(0)}\
+.footer{text-align:center;font-size:.75rem;color:#475569;margin-top:1.5rem}\
+.spinner{width:32px;height:32px;border:3px solid rgba(16,185,129,.2);\
+border-top-color:#10b981;border-radius:50%;\
+animation:spin .8s linear infinite;margin:1.5rem auto 0}\
+@keyframes spin{to{transform:rotate(360deg)}}\
+.check-anim{animation:pop .4s cubic-bezier(.175,.885,.32,1.275)}\
+@keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}\
 ";
 
+/// Shared OAuth 2.1 PKCE state held in memory for the lifetime of the server.
+///
+/// Authorization codes are stored in `codes` and expire after [`CODE_TTL`].
+/// Restarting the server invalidates all in-flight authorization flows.
 pub struct OAuthState {
+    /// Issuer URL (e.g. `"https://mcp.example.com"`), included in discovery metadata.
     issuer: String,
+    /// Bearer token returned after a successful code exchange. Equal to `MCP_API_KEY`.
     access_token: String,
+    /// Allowed redirect-URI origins; empty means all origins are permitted.
     allowed_origins: Vec<String>,
+    /// In-flight authorization codes keyed by their hex value.
     codes: Mutex<HashMap<String, CodeEntry>>,
 }
 
+/// Lifetime of a single authorization code before it is rejected.
 const CODE_TTL: Duration = Duration::from_secs(600); // 10 min
 
 #[derive(Clone, Debug)]
@@ -43,6 +86,14 @@ struct CodeEntry {
 }
 
 impl OAuthState {
+    /// Build an [`OAuthState`] from environment variables.
+    ///
+    /// Required: `OAUTH_ISSUER`, `MCP_API_KEY`.
+    /// Optional: `OAUTH_ALLOWED_ORIGINS` (comma-separated; empty = allow all).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `OAUTH_ISSUER` or `MCP_API_KEY` are not set.
     pub fn from_env() -> anyhow::Result<Arc<Self>> {
         let issuer = std::env::var("OAUTH_ISSUER")
             .map_err(|_| anyhow::anyhow!("OAUTH_ISSUER env var is required"))?;
@@ -76,6 +127,10 @@ impl OAuthState {
     }
 }
 
+/// Build the axum [`Router`] that handles all OAuth 2.1 PKCE endpoints.
+///
+/// Mounts: `/.well-known/oauth-*`, `/oauth/register`, `/oauth/authorize`,
+/// `/oauth/approve`, `/oauth/token`, `/oauth/validate`, `/oauth/style.css`.
 pub fn router(state: Arc<OAuthState>) -> Router {
     Router::new()
         .route(
@@ -222,7 +277,8 @@ async fn approve(Query(q): Query<ApproveQuery>) -> Response {
         url.push_str("&state=");
         url.push_str(&urlencoding::encode(&q.state));
     }
-    Redirect::to(&url).into_response()
+    let html = APPROVED_HTML.replace("{{REDIRECT_URL}}", &esc_html(&url));
+    Html(html).into_response()
 }
 
 #[derive(Deserialize)]

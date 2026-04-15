@@ -1,3 +1,9 @@
+//! MCP documentation server binary.
+//!
+//! Loads all Markdown documentation from `DOCS_PATH` at startup, exposes them
+//! through the `rmcp` Streamable HTTP transport, and handles OAuth 2.1 PKCE
+//! authorization in the same process.
+
 use rmcp::handler::server::router::Router;
 use rmcp::transport::streamable_http_server::{
     session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,

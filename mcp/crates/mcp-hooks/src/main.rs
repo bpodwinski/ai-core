@@ -1,3 +1,8 @@
+//! Claude Code hooks binary.
+//!
+//! Subcommands: `rust-check` (run `cargo fmt` + `clippy` on changed files),
+//! `sync-skill` (mirror `CLAUDE.md` → `AGENTS.md` for Codex CLI compatibility).
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
