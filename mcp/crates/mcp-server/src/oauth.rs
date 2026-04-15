@@ -58,13 +58,22 @@ animation:spin .8s linear infinite;margin:1.5rem auto 0}\
 @keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}\
 ";
 
+/// Shared OAuth 2.1 PKCE state held in memory for the lifetime of the server.
+///
+/// Authorization codes are stored in `codes` and expire after [`CODE_TTL`].
+/// Restarting the server invalidates all in-flight authorization flows.
 pub struct OAuthState {
+    /// Issuer URL (e.g. `"https://mcp.example.com"`), included in discovery metadata.
     issuer: String,
+    /// Bearer token returned after a successful code exchange. Equal to `MCP_API_KEY`.
     access_token: String,
+    /// Allowed redirect-URI origins; empty means all origins are permitted.
     allowed_origins: Vec<String>,
+    /// In-flight authorization codes keyed by their hex value.
     codes: Mutex<HashMap<String, CodeEntry>>,
 }
 
+/// Lifetime of a single authorization code before it is rejected.
 const CODE_TTL: Duration = Duration::from_secs(600); // 10 min
 
 #[derive(Clone, Debug)]
@@ -77,6 +86,14 @@ struct CodeEntry {
 }
 
 impl OAuthState {
+    /// Build an [`OAuthState`] from environment variables.
+    ///
+    /// Required: `OAUTH_ISSUER`, `MCP_API_KEY`.
+    /// Optional: `OAUTH_ALLOWED_ORIGINS` (comma-separated; empty = allow all).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `OAUTH_ISSUER` or `MCP_API_KEY` are not set.
     pub fn from_env() -> anyhow::Result<Arc<Self>> {
         let issuer = std::env::var("OAUTH_ISSUER")
             .map_err(|_| anyhow::anyhow!("OAUTH_ISSUER env var is required"))?;
@@ -110,6 +127,10 @@ impl OAuthState {
     }
 }
 
+/// Build the axum [`Router`] that handles all OAuth 2.1 PKCE endpoints.
+///
+/// Mounts: `/.well-known/oauth-*`, `/oauth/register`, `/oauth/authorize`,
+/// `/oauth/approve`, `/oauth/token`, `/oauth/validate`, `/oauth/style.css`.
 pub fn router(state: Arc<OAuthState>) -> Router {
     Router::new()
         .route(
