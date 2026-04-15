@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="1;url={{REDIRECT_URL}}">
   <title>MCP — Accès autorisé</title>
   <link rel="stylesheet" href="/oauth/style.css">
 </head>
@@ -21,13 +22,5 @@
 
     <p class="footer">Vous pouvez fermer cette fenêtre si la redirection ne se produit pas.</p>
   </div>
-
-  <script>
-    (function() {
-      var el = document.getElementById('redir');
-      if (el) { setTimeout(function() { window.location.href = el.getAttribute('data-url'); }, 1200); }
-    })();
-  </script>
-  <span id="redir" data-url="{{REDIRECT_URL}}" style="display:none"></span>
 </body>
 </html>
