@@ -1,8 +1,20 @@
+//! Post-edit hook that mirrors `CLAUDE.md` → `AGENTS.md` for Codex CLI.
+
 use anyhow::{Context, Result};
 use serde_json::Value;
 use std::io::{self, Read};
 use std::path::Path;
 
+/// Mirror `CLAUDE.md` to `AGENTS.md` in the same directory after a Write/Edit
+/// hook event targeting `CLAUDE.md`.
+///
+/// Reads a Claude Code `PostToolUse` JSON event from stdin. Does nothing if the
+/// tool name is not `"Write"` or `"Edit"`, or if the target file is not named
+/// `CLAUDE.md`.
+///
+/// # Errors
+///
+/// Returns an error if stdin cannot be read or if the file copy fails.
 pub fn run() -> Result<()> {
     let mut stdin = String::new();
     io::stdin().read_to_string(&mut stdin)?;

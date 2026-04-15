@@ -1,8 +1,23 @@
+//! Documentation source fetching and transform pipeline.
+
 use anyhow::{bail, Context, Result};
 use mcp_common::{DocSource, Manifest, Transform};
 use std::path::Path;
 use std::process::Command;
 
+/// Fetch and process all documentation sources declared in `manifest`.
+///
+/// For each `docSources` entry:
+/// - `Git` sources are shallow-cloned into `tmp`, then copied to `docs_dir/<name>/`.
+/// - `Url` sources are downloaded into `tmp`, then copied or transformed.
+/// - `Local` sources are copied from `local_docs/<path>` to `docs_dir/<name>/`.
+///
+/// Post-processing [`Transform`]s are applied in declaration order after fetching.
+///
+/// # Errors
+///
+/// Returns an error if a source cannot be fetched, a directory cannot be
+/// created, or a transform fails.
 pub fn run(manifest: &Path, docs_dir: &Path, local_docs: &Path, tmp: &Path) -> Result<()> {
     let manifest = Manifest::load(manifest)?;
 

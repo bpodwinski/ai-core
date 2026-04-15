@@ -1,6 +1,18 @@
+//! Single-file Markdown splitter — one `.md` per heading.
+
 use anyhow::{Context, Result};
 use std::path::Path;
 
+/// Split a single Markdown file into one `.md` file per `##` or `###` heading.
+///
+/// Each section is written to `output_dir/<slug>.md`, where `<slug>` is the
+/// heading title converted to lowercase kebab-case. Content before the first
+/// heading is written as `overview.md`.
+///
+/// # Errors
+///
+/// Returns an error if `input` cannot be read or if any output file cannot be
+/// written.
 pub fn run(input: &Path, output_dir: &Path) -> Result<()> {
     let raw =
         std::fs::read_to_string(input).with_context(|| format!("reading {}", input.display()))?;
