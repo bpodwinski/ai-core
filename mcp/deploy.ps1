@@ -97,3 +97,22 @@ $restartCmd = "cd " + $REMOTE_PATH + " && " + $buildCmd + "docker compose up -d 
 if ($LASTEXITCODE -ne 0) { Write-Error "docker compose a échoué (exit $LASTEXITCODE)"; exit 1 }
 
 Write-Host "==> Done."
+
+# 3. Health check
+Write-Host "==> Health check..."
+$maxAttempts = 6
+$delay = 5
+for ($i = 1; $i -le $maxAttempts; $i++) {
+    try {
+        Invoke-RestMethod -Uri $HEALTH_URL -TimeoutSec 10 | Out-Null
+        Write-Host "==> OK - server is up."
+        exit 0
+    } catch {
+        if ($i -lt $maxAttempts) {
+            Write-Host "  attempt $i/$maxAttempts failed, retrying in $delay s..."
+            Start-Sleep -Seconds $delay
+        }
+    }
+}
+Write-Error "Health check FAILED after $maxAttempts attempts."
+exit 1

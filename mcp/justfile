@@ -32,15 +32,11 @@ deploy:
 deploy-no-cache:
     powershell -NoProfile -ExecutionPolicy Bypass -File deploy.ps1 -NoCache
 
-# Health check — verify the deployed server is responding
-health:
-    curl -sf "https://mcp.benoitpodwinski.com/health" || (echo "Health check FAILED"; exit 1)
-
 # Build + deploy (remote rebuilds from source, no local build needed)
-ship: deploy health
+ship: deploy
 
 # Build + deploy (force full rebuild, no Docker cache)
-ship-no-cache: deploy-no-cache health
+ship-no-cache: deploy-no-cache
 
 # Restart a service (ex: just restart mcp-docs)
 restart SERVICE:
