@@ -348,6 +348,61 @@ impl DocServer {
 impl DocServer {
     // ── Static docs tools ─────────────────────────────────────────────────────
 
+    fn extract_snippet(content: &str, tokens: &[&str], radius: usize) -> String {
+        let lower = content.to_lowercase();
+        let pos = tokens.iter().filter_map(|t| lower.find(t)).min();
+
+        match pos {
+            None => {
+                // Match via topic/category only — return beginning of doc
+                let end = content
+                    .char_indices()
+                    .nth(radius)
+                    .map(|(i, _)| i)
+                    .unwrap_or(content.len());
+                let snippet = &content[..end];
+                if end < content.len() {
+                    format!("{snippet}…")
+                } else {
+                    snippet.to_string()
+                }
+            }
+            Some(pos) => {
+                let start = pos.saturating_sub(radius / 2);
+                let end = (pos + radius).min(content.len());
+                // Snap to line boundaries
+                let start = content[..start].rfind('\n').map(|i| i + 1).unwrap_or(start);
+                let end = content[end..].find('\n').map(|i| end + i).unwrap_or(end);
+                // Ensure valid char boundaries
+                let start = content
+                    .char_indices()
+                    .map(|(i, _)| i)
+                    .filter(|&i| i >= start)
+                    .next()
+                    .unwrap_or(start);
+                let end = content
+                    .char_indices()
+                    .map(|(i, _)| i)
+                    .filter(|&i| i <= end)
+                    .last()
+                    .map(|i| {
+                        // advance past the char at i
+                        content[i..]
+                            .chars()
+                            .next()
+                            .map(|c| i + c.len_utf8())
+                            .unwrap_or(i)
+                    })
+                    .unwrap_or(end);
+                let end = end.min(content.len());
+                let snippet = &content[start..end];
+                let prefix = if start > 0 { "…" } else { "" };
+                let suffix = if end < content.len() { "…" } else { "" };
+                format!("{prefix}{snippet}{suffix}")
+            }
+        }
+    }
+
     #[tool(
         name = "search_docs",
         description = "Search documentation across all loaded docs. Returns matching sections. Use the optional 'category' parameter to filter by doc source (e.g. 'leptos', 'rust', 'daisyui')."
@@ -358,14 +413,23 @@ impl DocServer {
                 text: "Query too long (max 500 characters).".into(),
             });
         }
-        let query = input.query.to_lowercase();
+        let tokens: Vec<String> = input
+            .query
+            .split_whitespace()
+            .map(|t| t.to_lowercase())
+            .collect();
         let results: Vec<_> = self
             .docs
             .iter()
             .filter(|doc| {
-                let matches_query = doc.content.to_lowercase().contains(&query)
-                    || doc.topic.to_lowercase().contains(&query)
-                    || doc.category.to_lowercase().contains(&query);
+                let content_lc = doc.content.to_lowercase();
+                let topic_lc = doc.topic.to_lowercase();
+                let cat_lc = doc.category.to_lowercase();
+                let matches_query = tokens.iter().all(|t| {
+                    content_lc.contains(t.as_str())
+                        || topic_lc.contains(t.as_str())
+                        || cat_lc.contains(t.as_str())
+                });
                 let matches_cat = input
                     .category
                     .as_ref()
@@ -374,7 +438,11 @@ impl DocServer {
                 matches_query && matches_cat
             })
             .take(20)
-            .map(|doc| format!("## [{}]\n\n{}", Self::full_path(doc), doc.content))
+            .map(|doc| {
+                let token_refs: Vec<&str> = tokens.iter().map(|t| t.as_str()).collect();
+                let snippet = Self::extract_snippet(&doc.content, &token_refs, 400);
+                format!("## [{}]\n\n{}", Self::full_path(doc), snippet)
+            })
             .collect();
 
         let text = if results.is_empty() {
