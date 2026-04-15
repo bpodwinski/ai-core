@@ -1,5 +1,15 @@
 # Rustdoc History
 
+## 2026-04-15T09:00:00Z
+
+- **Area**: `mcp-build` (catalog, fetch, mdx, split) · `mcp-hooks` (rust_check, sync_skill) · `mcp-server/tools`
+- **Items documented**: ~35
+- **Summary**:
+  - `mcp-build`: module `//!` + `pub fn` docs for `write_catalog`, `run` (fetch), `strip_dir`, `run` (split) — all with `# Errors` sections
+  - `mcp-hooks`: module `//!` + `pub fn` docs for `rust_check::run`, `sync_skill::run`
+  - `mcp-server/tools`: `DocEntry`, `DocServer`, `DocResult.text`, all 14 MCP tool input structs, `load_docs_from_dir`, `extract_categories`, `DocServer::new`
+- **Validation**: `cargo fmt --all` + `cargo check --workspace` — pass
+
 ## 2026-04-15T08:00:00Z
 
 - **Area**: full workspace — `mcp-common`, `mcp-server`, `mcp-configgen`, `mcp-build`, `mcp-hooks`
