@@ -542,11 +542,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "get_item_details",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("get_item_details", args))
         });
         Json(DocResult { text })
     }
@@ -562,11 +567,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "get_item_source",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("get_item_source", args))
         });
         Json(DocResult { text })
     }
@@ -582,11 +592,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "get_dependencies",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("get_dependencies", args))
         });
         Json(DocResult { text })
     }
@@ -602,11 +617,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "list_crate_items",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("list_crate_items", args))
         });
         Json(DocResult { text })
     }
@@ -619,11 +639,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "get_item_docs",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("get_item_docs", args))
         });
         Json(DocResult { text })
     }
@@ -639,11 +664,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "search_items_fuzzy",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("search_items_fuzzy", args))
         });
         Json(DocResult { text })
     }
@@ -659,11 +689,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "list_crate_versions",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("list_crate_versions", args))
         });
         Json(DocResult { text })
     }
@@ -676,11 +711,16 @@ impl DocServer {
         let Some(proxy) = self.crate_proxy.clone() else {
             return Self::proxy_unavailable();
         };
+        let args = match serde_json::to_value(input) {
+            Ok(v) => v,
+            Err(e) => {
+                return Json(DocResult {
+                    text: format!("serialization error: {e}"),
+                })
+            }
+        };
         let text = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(proxy.call_tool(
-                "remove_crate",
-                serde_json::to_value(input).unwrap_or_default(),
-            ))
+            tokio::runtime::Handle::current().block_on(proxy.call_tool("remove_crate", args))
         });
         Json(DocResult { text })
     }

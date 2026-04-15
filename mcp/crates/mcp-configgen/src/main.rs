@@ -26,6 +26,7 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
     let manifest = Manifest::load(&args.manifest)?;
+    manifest.validate()?;
 
     std::fs::create_dir_all(&args.out_dir)
         .with_context(|| format!("creating {}", args.out_dir.display()))?;

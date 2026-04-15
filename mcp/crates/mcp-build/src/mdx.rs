@@ -44,7 +44,8 @@ fn strip_file(path: &Path) -> Result<()> {
     let source =
         std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     let normalized = source.replace("\r\n", "\n");
-    let md = strip_mdx(&normalized);
+    let md =
+        strip_mdx(&normalized).with_context(|| format!("stripping MDX from {}", path.display()))?;
     let out = path.with_extension("md");
     std::fs::write(&out, md).with_context(|| format!("writing {}", out.display()))?;
     Ok(())
@@ -57,7 +58,12 @@ fn strip_file(path: &Path) -> Result<()> {
 ///   - top-level `{expression}` blocks (brace-balanced)
 ///   - JSX elements: `<Tag attrs...>…</Tag>` unwrapped to inner content;
 ///     self-closing `<Tag ... />` dropped.
-pub fn strip_mdx(src: &str) -> String {
+///
+/// # Errors
+///
+/// Returns an error if the byte manipulation produces invalid UTF-8 (should not
+/// happen for well-formed UTF-8 input, but propagated rather than panicking).
+pub fn strip_mdx(src: &str) -> Result<String> {
     let bytes = src.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(src.len());
     let mut i = 0;
@@ -137,11 +143,12 @@ pub fn strip_mdx(src: &str) -> String {
         i += 1;
     }
 
-    let as_str =
-        String::from_utf8(out).expect("valid UTF-8: input was UTF-8 and skips are ASCII-bounded");
+    let as_str = String::from_utf8(out).context(
+        "non-UTF-8 output from MDX strip (input byte manipulation produced invalid UTF-8)",
+    )?;
     let collapsed = collapse_blank_lines(&as_str);
     let trimmed = collapsed.trim_start_matches('\n').trim_end().to_string();
-    format!("{}\n", trimmed)
+    Ok(format!("{}\n", trimmed))
 }
 
 fn starts_with(bytes: &[u8], i: usize, needle: &[u8]) -> bool {

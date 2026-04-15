@@ -71,7 +71,7 @@ Claude Code → HTTPS → Cloudflare Tunnel → nginx (OAuth auth_request) → m
 ```
 
 - Single multi-tenant container serving all doc sources
-- OAuth 2.1 PKCE via `mcp/oauth/server.js`
+- OAuth 2.1 PKCE via `mcp/crates/mcp-server/src/oauth.rs`
 - Transport: Streamable HTTP (`rmcp` Rust SDK)
 - Client config: one entry `"docs"` in `.mcp.json`
 

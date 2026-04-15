@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, ChildStdout};
 use tokio::sync::Mutex;
+use tokio::time::Duration;
 
 /// Subprocess bridge to rust-docs-mcp (stdio JSON-RPC MCP protocol).
 /// Spawned once at startup; tool calls are forwarded via stdin/stdout.
@@ -33,7 +34,10 @@ impl CrateProxy {
 
         // Let the subprocess run as a daemon — we hold its stdin/stdout handles.
         tokio::spawn(async move {
-            let _ = child.wait().await;
+            match child.wait().await {
+                Ok(status) => tracing::error!("rust-docs-mcp exited unexpectedly: {status}"),
+                Err(e) => tracing::error!("rust-docs-mcp wait error: {e}"),
+            }
         });
 
         let proxy = Arc::new(Self {
@@ -60,6 +64,13 @@ impl CrateProxy {
         stdin.write_all(msg.as_bytes()).await?;
         stdin.flush().await?;
         Ok(())
+    }
+
+    /// Read lines until we get a JSON-RPC response, with a 30-second timeout.
+    async fn recv_timeout(&self) -> anyhow::Result<serde_json::Value> {
+        tokio::time::timeout(Duration::from_secs(30), self.recv())
+            .await
+            .map_err(|_| anyhow::anyhow!("rust-docs-mcp response timeout (30s)"))?
     }
 
     /// Read lines until we get a JSON-RPC response (has an `id` field).
@@ -98,7 +109,7 @@ impl CrateProxy {
             }
         }))
         .await?;
-        self.recv().await?; // consume initialize response
+        self.recv_timeout().await?; // consume initialize response
 
         // Notify the subprocess that initialization is done
         self.send(&serde_json::json!({
@@ -115,7 +126,7 @@ impl CrateProxy {
             "method": "tools/list"
         }))
         .await?;
-        match self.recv().await {
+        match self.recv_timeout().await {
             Ok(resp) => {
                 if let Some(tools) = resp["result"]["tools"].as_array() {
                     for tool in tools {
@@ -151,7 +162,7 @@ impl CrateProxy {
             return format!("Failed to send request to rust-docs-mcp: {e}");
         }
 
-        match self.recv().await {
+        match self.recv_timeout().await {
             Ok(resp) => {
                 if let Some(err) = resp.get("error") {
                     return format!("rust-docs-mcp error: {err}");

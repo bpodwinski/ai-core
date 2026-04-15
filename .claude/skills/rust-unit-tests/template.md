@@ -76,8 +76,64 @@ mod tests {
     fn test_<function>_panics_when_<condition>() {
         <function>(<input_that_panics>);
     }
+
+    // ── Async function (tokio runtime) ────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_<function>_<scenario>() {
+        // Arrange
+        let input = <value>;
+
+        // Act
+        let result = <async_function>(input).await;
+
+        // Assert
+        assert_eq!(result, <expected>);
+    }
+
+    // ── Async Result<T, E> ────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_<function>_returns_ok_when_<condition>() {
+        let result = <async_function>(<valid_input>).await;
+        assert!(result.is_ok(), "expected Ok, got: {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn test_<function>_returns_err_when_<condition>() {
+        let result = <async_function>(<invalid_input>).await;
+        assert!(result.is_err());
+    }
+
+    // ── Parameterized test (table-driven) ─────────────────────────────────────
+
+    #[test]
+    fn test_<function>_table_driven() {
+        let cases: &[(<InputType>, <ExpectedType>)] = &[
+            (<input_1>, <expected_1>),
+            (<input_2>, <expected_2>),
+            (<input_3>, <expected_3>),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(<function>(input), *expected, "input={input:?}");
+        }
+    }
 }
 ```
+
+## `tokio::test` setup
+
+Add to `Cargo.toml` under `[dev-dependencies]` if not already present:
+
+```toml
+tokio = { version = "1", features = ["full", "test-util"] }
+```
+
+Use `#[tokio::test]` for any `async fn` — never wrap async bodies in `tokio::runtime::Runtime::new().unwrap().block_on(...)` in tests.
+
+## Table-driven tests
+
+Use a slice of `(input, expected)` tuples when testing the same function over many inputs. Include `input={input:?}` in the `assert_eq!` message so failures identify which case broke.
 
 ## Naming convention
 

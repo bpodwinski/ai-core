@@ -14,6 +14,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
+use tracing::warn;
 
 const AUTHORIZE_HTML: &str = include_str!("views/authorize.html");
 const APPROVED_HTML: &str = include_str!("views/approved.html");
@@ -121,9 +122,7 @@ impl OAuthState {
             Some(o) => o,
             None => return false,
         };
-        self.allowed_origins
-            .iter()
-            .any(|a| origin == *a || uri.starts_with(a))
+        self.allowed_origins.iter().any(|a| origin == *a)
     }
 }
 
@@ -209,22 +208,34 @@ async fn authorize(State(s): State<Arc<OAuthState>>, Query(q): Query<AuthorizeQu
     if q.response_type.as_deref() != Some("code")
         || q.code_challenge_method.as_deref() != Some("S256")
     {
+        warn!(
+            response_type = ?q.response_type,
+            method = ?q.code_challenge_method,
+            "authorize: invalid_request (bad response_type or challenge method)"
+        );
         return error_json(StatusCode::BAD_REQUEST, "invalid_request");
     }
     let challenge = match q.code_challenge {
         Some(c) if !c.is_empty() => c,
-        _ => return error_json(StatusCode::BAD_REQUEST, "invalid_request"),
+        _ => {
+            warn!("authorize: invalid_request (missing code_challenge)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_request");
+        }
     };
     let redirect_uri = match q.redirect_uri {
         Some(u) => u,
-        None => return error_json(StatusCode::BAD_REQUEST, "invalid_request"),
+        None => {
+            warn!("authorize: invalid_request (missing redirect_uri)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_request");
+        }
     };
     if !s.is_allowed_redirect(&redirect_uri) {
+        warn!(redirect_uri, "authorize: invalid_redirect_uri");
         return error_json(StatusCode::BAD_REQUEST, "invalid_redirect_uri");
     }
 
     let code = random_hex(16);
-    s.codes.lock().unwrap().insert(
+    s.codes.lock().unwrap_or_else(|e| e.into_inner()).insert(
         code.clone(),
         CodeEntry {
             client_id: q.client_id.unwrap_or_default(),
@@ -260,6 +271,10 @@ struct ApproveQuery {
 
 async fn approve(Query(q): Query<ApproveQuery>) -> Response {
     if !(q.redirect_uri.starts_with("http://") || q.redirect_uri.starts_with("https://")) {
+        warn!(
+            redirect_uri = q.redirect_uri,
+            "approve: invalid_redirect_uri (not http/https)"
+        );
         return error_json(StatusCode::BAD_REQUEST, "invalid_redirect_uri");
     }
     let sep = if q.redirect_uri.contains('?') {
@@ -292,39 +307,59 @@ struct TokenReq {
 
 async fn token(State(s): State<Arc<OAuthState>>, Form(req): Form<TokenReq>) -> Response {
     if req.grant_type.as_deref() != Some("authorization_code") {
+        warn!(grant_type = ?req.grant_type, "token: unsupported_grant_type");
         return error_json(StatusCode::BAD_REQUEST, "unsupported_grant_type");
     }
     let redirect_uri = match req.redirect_uri {
         Some(r) => r,
-        None => return error_json(StatusCode::BAD_REQUEST, "invalid_request"),
+        None => {
+            warn!("token: invalid_request (missing redirect_uri)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_request");
+        }
     };
     if !s.is_allowed_redirect(&redirect_uri) {
+        warn!(redirect_uri, "token: invalid_redirect_uri");
         return error_json(StatusCode::BAD_REQUEST, "invalid_redirect_uri");
     }
     let code = match req.code {
         Some(c) => c,
-        None => return error_json(StatusCode::BAD_REQUEST, "invalid_grant"),
+        None => {
+            warn!("token: invalid_grant (missing code)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+        }
     };
     let client_id = req.client_id.unwrap_or_default();
     let verifier = match req.code_verifier {
         Some(v) => v,
-        None => return error_json(StatusCode::BAD_REQUEST, "invalid_grant"),
+        None => {
+            warn!(client_id, "token: invalid_grant (missing code_verifier)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+        }
     };
 
-    let mut codes = s.codes.lock().unwrap();
+    let mut codes = s.codes.lock().unwrap_or_else(|e| e.into_inner());
     // Nettoyage des codes expirés ou déjà utilisés
     codes.retain(|_, e| !e.used && e.created_at.elapsed() < CODE_TTL);
     let entry = match codes.get_mut(&code) {
         Some(e) => e,
-        None => return error_json(StatusCode::BAD_REQUEST, "invalid_grant"),
+        None => {
+            warn!(client_id, "token: invalid_grant (unknown or expired code)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+        }
     };
     if entry.used || entry.client_id != client_id || entry.redirect_uri != redirect_uri {
+        warn!(
+            client_id,
+            entry_used = entry.used,
+            "token: invalid_grant (used/client_id/redirect mismatch)"
+        );
         return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
     }
 
     let hash = sha2::Sha256::digest(verifier.as_bytes());
     let expected = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash);
     if expected != entry.code_challenge {
+        warn!(client_id, "token: invalid_grant (PKCE challenge mismatch)");
         return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
     }
     entry.used = true;
@@ -342,7 +377,13 @@ async fn validate(State(s): State<Arc<OAuthState>>, headers: HeaderMap) -> Statu
     let expected = format!("Bearer {}", s.access_token);
     match headers.get("authorization").and_then(|v| v.to_str().ok()) {
         Some(auth) if auth == expected => StatusCode::OK,
-        _ => StatusCode::UNAUTHORIZED,
+        other => {
+            warn!(
+                has_header = other.is_some(),
+                "validate: unauthorized (bad or missing Bearer token)"
+            );
+            StatusCode::UNAUTHORIZED
+        }
     }
 }
 

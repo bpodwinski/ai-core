@@ -44,6 +44,14 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "4G"
+        reservations:
+          memory: "256M"
+    pids_limit: 512
     environment:
       DOCS_PATH: /docs
       RUST_DOCS_MCP_CACHE_DIR: /cache

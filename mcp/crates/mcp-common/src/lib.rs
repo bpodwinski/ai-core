@@ -146,6 +146,32 @@ impl Manifest {
             .with_context(|| format!("parsing manifest at {}", path.display()))?;
         Ok(manifest)
     }
+
+    /// Validate manifest consistency.
+    ///
+    /// Checks that:
+    /// - `base_url` is not empty.
+    /// - Every `docSources` entry has a unique `name` (duplicates would silently
+    ///   overwrite each other's output directory at build time).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error describing the first violation found.
+    pub fn validate(&self) -> Result<()> {
+        if self.base_url.is_empty() {
+            anyhow::bail!("manifest: `baseUrl` must not be empty");
+        }
+        let mut seen = std::collections::HashSet::new();
+        for entry in &self.doc_sources {
+            if !seen.insert(&entry.name) {
+                anyhow::bail!(
+                    "manifest: duplicate docSource name {:?} — each name must be unique",
+                    entry.name
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 impl DocSource {

@@ -84,8 +84,16 @@ echo "github-mcp-server installed → $BIN_DIR"
 echo ""
 echo "Installing mcp-hooks..."
 case "$OS" in
-  Linux)  MCP_HOOKS_ASSET="mcp-hooks-linux-x86_64"  ;;
-  Darwin) MCP_HOOKS_ASSET="mcp-hooks-macos-arm64"   ;;
+  Linux)
+    case "$ARCH" in
+      aarch64) MCP_HOOKS_ASSET="mcp-hooks-linux-arm64"  ;;
+      *)       MCP_HOOKS_ASSET="mcp-hooks-linux-x86_64" ;;
+    esac ;;
+  Darwin)
+    case "$ARCH" in
+      arm64)   MCP_HOOKS_ASSET="mcp-hooks-macos-arm64"   ;;
+      *)       MCP_HOOKS_ASSET="mcp-hooks-macos-x86_64"  ;;
+    esac ;;
   MINGW*|MSYS*|CYGWIN*) MCP_HOOKS_ASSET="mcp-hooks-windows-x86_64.exe" ;;
 esac
 MCP_HOOKS_URL="https://github.com/${REPO}/releases/latest/download/${MCP_HOOKS_ASSET}"
@@ -93,9 +101,26 @@ case "$OS" in
   MINGW*|MSYS*|CYGWIN*) MCP_HOOKS_DEST="$BIN_DIR/mcp-hooks.exe" ;;
   *) MCP_HOOKS_DEST="$BIN_DIR/mcp-hooks" ;;
 esac
-curl -fsSL "$MCP_HOOKS_URL" -o "$MCP_HOOKS_DEST"
-chmod +x "$MCP_HOOKS_DEST" 2>/dev/null || true
-echo "mcp-hooks installed → $MCP_HOOKS_DEST"
+
+# Skip download if the installed binary is already identical (idempotency)
+MCP_HOOKS_TMP="$TMP/mcp-hooks-new"
+curl -fsSL "$MCP_HOOKS_URL" -o "$MCP_HOOKS_TMP"
+if [[ -f "$MCP_HOOKS_DEST" ]] && command -v sha256sum &>/dev/null; then
+  EXISTING_HASH=$(sha256sum "$MCP_HOOKS_DEST" | cut -d' ' -f1)
+  NEW_HASH=$(sha256sum "$MCP_HOOKS_TMP" | cut -d' ' -f1)
+  if [[ "$EXISTING_HASH" == "$NEW_HASH" ]]; then
+    echo "mcp-hooks already up to date → $MCP_HOOKS_DEST"
+    rm -f "$MCP_HOOKS_TMP"
+  else
+    mv "$MCP_HOOKS_TMP" "$MCP_HOOKS_DEST"
+    chmod +x "$MCP_HOOKS_DEST" 2>/dev/null || true
+    echo "mcp-hooks installed → $MCP_HOOKS_DEST"
+  fi
+else
+  mv "$MCP_HOOKS_TMP" "$MCP_HOOKS_DEST"
+  chmod +x "$MCP_HOOKS_DEST" 2>/dev/null || true
+  echo "mcp-hooks installed → $MCP_HOOKS_DEST"
+fi
 
 rm -rf "$TMP"
 echo ""
