@@ -62,6 +62,7 @@ animation:spin .8s linear infinite;margin:1.5rem auto 0}\
 /// Shared OAuth 2.1 PKCE state held in memory for the lifetime of the server.
 ///
 /// Authorization codes are stored in `codes` and expire after [`CODE_TTL`].
+/// Refresh tokens are stored in `refresh_tokens` and expire after [`REFRESH_TTL`].
 /// Restarting the server invalidates all in-flight authorization flows.
 pub struct OAuthState {
     /// Issuer URL (e.g. `"https://mcp.example.com"`), included in discovery metadata.
@@ -72,10 +73,18 @@ pub struct OAuthState {
     allowed_origins: Vec<String>,
     /// In-flight authorization codes keyed by their hex value.
     codes: Mutex<HashMap<String, CodeEntry>>,
+    /// Active refresh tokens keyed by their hex value.
+    refresh_tokens: Mutex<HashMap<String, RefreshEntry>>,
 }
 
 /// Lifetime of a single authorization code before it is rejected.
 const CODE_TTL: Duration = Duration::from_secs(600); // 10 min
+
+/// Lifetime of a refresh token (90 days).
+const REFRESH_TTL: Duration = Duration::from_secs(90 * 24 * 3600);
+
+/// Access token lifetime advertised to clients (1 hour).
+const ACCESS_TOKEN_TTL_SECS: u64 = 3600;
 
 #[derive(Clone, Debug)]
 struct CodeEntry {
@@ -83,6 +92,12 @@ struct CodeEntry {
     redirect_uri: String,
     code_challenge: String,
     used: bool,
+    created_at: Instant,
+}
+
+#[derive(Clone, Debug)]
+struct RefreshEntry {
+    client_id: String,
     created_at: Instant,
 }
 
@@ -111,6 +126,7 @@ impl OAuthState {
             access_token,
             allowed_origins,
             codes: Mutex::new(HashMap::new()),
+            refresh_tokens: Mutex::new(HashMap::new()),
         }))
     }
 
@@ -163,7 +179,7 @@ async fn auth_server_metadata(State(s): State<Arc<OAuthState>>) -> Json<serde_js
         "token_endpoint": format!("{}/oauth/token", s.issuer),
         "registration_endpoint": format!("{}/oauth/register", s.issuer),
         "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
         "code_challenge_methods_supported": ["S256"],
         "token_endpoint_auth_methods_supported": ["none"],
     }))
@@ -303,12 +319,17 @@ struct TokenReq {
     redirect_uri: Option<String>,
     client_id: Option<String>,
     code_verifier: Option<String>,
+    refresh_token: Option<String>,
 }
 
 async fn token(State(s): State<Arc<OAuthState>>, Form(req): Form<TokenReq>) -> Response {
-    if req.grant_type.as_deref() != Some("authorization_code") {
-        warn!(grant_type = ?req.grant_type, "token: unsupported_grant_type");
-        return error_json(StatusCode::BAD_REQUEST, "unsupported_grant_type");
+    match req.grant_type.as_deref() {
+        Some("refresh_token") => return handle_refresh(&s, req),
+        Some("authorization_code") => {}
+        _ => {
+            warn!(grant_type = ?req.grant_type, "token: unsupported_grant_type");
+            return error_json(StatusCode::BAD_REQUEST, "unsupported_grant_type");
+        }
     }
     let redirect_uri = match req.redirect_uri {
         Some(r) => r,
@@ -363,12 +384,70 @@ async fn token(State(s): State<Arc<OAuthState>>, Form(req): Form<TokenReq>) -> R
         return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
     }
     entry.used = true;
+    let client_id = entry.client_id.clone();
     drop(codes);
 
+    let refresh_token = issue_refresh_token(&s, client_id);
     Json(serde_json::json!({
         "access_token": s.access_token,
         "token_type": "Bearer",
-        "expires_in": 3600,
+        "expires_in": ACCESS_TOKEN_TTL_SECS,
+        "refresh_token": refresh_token,
+    }))
+    .into_response()
+}
+
+fn issue_refresh_token(s: &OAuthState, client_id: String) -> String {
+    let token = random_hex(32);
+    let mut rt = s.refresh_tokens.lock().unwrap_or_else(|e| e.into_inner());
+    rt.retain(|_, e| e.created_at.elapsed() < REFRESH_TTL);
+    rt.insert(
+        token.clone(),
+        RefreshEntry {
+            client_id,
+            created_at: Instant::now(),
+        },
+    );
+    token
+}
+
+fn handle_refresh(s: &OAuthState, req: TokenReq) -> Response {
+    let rt_value = match req.refresh_token {
+        Some(v) if !v.is_empty() => v,
+        _ => {
+            warn!("token/refresh: invalid_grant (missing refresh_token)");
+            return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+        }
+    };
+    let client_id = req.client_id.unwrap_or_default();
+
+    let mut rt = s.refresh_tokens.lock().unwrap_or_else(|e| e.into_inner());
+    rt.retain(|_, e| e.created_at.elapsed() < REFRESH_TTL);
+    let entry = match rt.remove(&rt_value) {
+        Some(e) => e,
+        None => {
+            warn!(
+                client_id,
+                "token/refresh: invalid_grant (unknown or expired refresh_token)"
+            );
+            return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+        }
+    };
+    if !client_id.is_empty() && entry.client_id != client_id {
+        warn!(
+            client_id,
+            "token/refresh: invalid_grant (client_id mismatch)"
+        );
+        return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+    }
+    drop(rt);
+
+    let new_refresh = issue_refresh_token(s, entry.client_id);
+    Json(serde_json::json!({
+        "access_token": s.access_token,
+        "token_type": "Bearer",
+        "expires_in": ACCESS_TOKEN_TTL_SECS,
+        "refresh_token": new_refresh,
     }))
     .into_response()
 }
