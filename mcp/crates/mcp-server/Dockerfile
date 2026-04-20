@@ -96,6 +96,6 @@ ENV RUSTUP_TOOLCHAIN=nightly-2025-06-24
 # cfg flags pour les crates avec features unstable
 # tokio (io-uring, taskdump) et reqwest (http3) nécessitent ces flags à la compilation
 ENV RUSTFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"
-ENV RUSTDOCFLAGS="--cfg tokio_unstable --cfg reqwest_unstable"
+ENV RUSTDOCFLAGS="--cfg tokio_unstable --cfg reqwest_unstable -A rustdoc::broken-intra-doc-links"
 
 CMD ["mcp-rust-docs"]
