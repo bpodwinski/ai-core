@@ -48,6 +48,14 @@
       }
     },
     {
+      "name": "odoo",
+      "description": "Odoo 18 developer API — ORM (CRUD, fields, domain, model/inheritance), external JSON-2 API (HTTP, auth, requests)",
+      "source": {
+        "type": "local",
+        "path": "odoo/"
+      }
+    },
+    {
       "name": "ollama",
       "description": "Ollama — open-source local LLM framework documentation (github.com/ollama/ollama)",
       "source": {
